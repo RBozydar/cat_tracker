@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     
     logger.info('Meal created successfully:', meal.id)
     return NextResponse.json(meal)
-  } catch (error: unknown) {
+  } catch (error) {
     logger.error('Failed to create meal:', error)
     return NextResponse.json(
       { error: 'Failed to create meal' },

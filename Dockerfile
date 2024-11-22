@@ -2,7 +2,7 @@ FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y curl sqlite3
 
 FROM base AS builder
 WORKDIR /app
@@ -16,13 +16,18 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Copy necessary files
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-# COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/prisma/schema.prisma ./prisma/
+COPY --from=builder /app/prisma/seed.ts ./prisma/
+COPY --from=builder /app/package.json ./package.json
 COPY scripts/start.sh ./start.sh
+
+# Install production dependencies and development dependencies needed for seeding
+RUN pnpm install
+RUN pnpm add -g typescript ts-node @types/node
 
 # Create data directory
 RUN mkdir -p /data && chmod 777 /data
