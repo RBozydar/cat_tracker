@@ -34,7 +34,7 @@ RUN mkdir -p /data && chmod 777 /data
 
 # Make the startup script executable
 RUN chmod +x ./start.sh
-
+FROM runner as pre-production
 EXPOSE 3000
 
 ENV PORT 3000

@@ -1,6 +1,12 @@
 version: '3.8'
+
+networks:
+  proxy:
+    external: true
+
 services:
-  app:
+  cattrack:
+    container_name: cattrack
     build: .
     ports:
       - "3000:3000"
@@ -23,7 +29,8 @@ services:
     networks:
       - proxy
     labels:
-      - "traefik.http.routers.cattrack.rule=Host(`cattrack.local.{DOMAINNAME}`, `cattrack.local.${HOST_SUBDOMAIN}.{DOMAINNAME}`, `cattrack.${HOST_SUBDOMAIN}.{DOMAINNAME}`, `cattrack.{DOMAINNAME}`)"
+      - "traefik.enable=true"
+      - "traefik.http.routers.cattrack.rule=Host(`cattrack.local.bozydar.me`, `cattrack.local.${HOST_SUBDOMAIN}.bozydar.me`, `cattrack.${HOST_SUBDOMAIN}.bozydar.me`, `cattrack.bozydar.me`)"
       - "traefik.http.routers.cattrack.entrypoints=https"
       - "traefik.http.routers.cattrack.tls=true"
       - "traefik.http.services.cattrack.loadbalancer.server.port=3000"
