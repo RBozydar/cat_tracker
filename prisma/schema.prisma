@@ -1,0 +1,29 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Cat {
+  id        Int      @id @default(autoincrement())
+  name      String
+  meals     Meal[]
+}
+
+model Meal {
+  id        Int      @id @default(autoincrement())
+  cat       Cat      @relation(fields: [catId], references: [id])
+  catId     Int
+  foodType  String   // 'WET' or 'DRY'
+  weight    Float    // in grams
+  createdAt DateTime @default(now())
+}
+
+model FoodSettings {
+  id        Int      @id @default(autoincrement())
+  foodType  String   @unique  // 'WET' or 'DRY'
+  calories  Float    // calories per 100g
+} 
