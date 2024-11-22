@@ -8,9 +8,16 @@ generator client {
 }
 
 model Cat {
-  id        Int      @id @default(autoincrement())
-  name      String
-  meals     Meal[]
+  id              Int      @id @default(autoincrement())
+  name            String
+  wetFoodId       Int      @map("wet_food_id")
+  dryFoodId       Int      @map("dry_food_id")
+  wetFood         FoodSettings @relation("CatWetFood", fields: [wetFoodId], references: [id])
+  dryFood         FoodSettings @relation("CatDryFood", fields: [dryFoodId], references: [id])
+  targetCalories  Float    @map("target_calories")
+  weight          Float
+  weightUnit      String   @default("kg") // "kg" or "lbs"
+  meals           Meal[]
 }
 
 model Meal {
@@ -24,6 +31,9 @@ model Meal {
 
 model FoodSettings {
   id        Int      @id @default(autoincrement())
-  foodType  String   @unique  // 'WET' or 'DRY'
+  name      String
+  foodType  String   // 'WET' or 'DRY'
   calories  Float    // calories per 100g
+  catsWet   Cat[]    @relation("CatWetFood")
+  catsDry   Cat[]    @relation("CatDryFood")
 } 

@@ -1,18 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ErrorAlert } from '@/components/error-alert'
 import { logger } from '@/lib/logger'
 import type { Meal } from '@/lib/types'
+import { CalorieSummary } from "@/components/calorie-summary"
 
-const CATS = [
-  { id: 1, name: 'Ahmed' },
-  { id: 2, name: 'Knypson' },
-  { id: 3, name: 'Lila' },
-]
+type Cat = {
+  id: number
+  name: string
+}
 
 const FOOD_TYPES = [
   { id: 'WET', label: 'Wet Food' },
@@ -24,10 +24,21 @@ interface MealFormProps {
 }
 
 export function MealForm({ onMealAdded }: MealFormProps) {
+  const [cats, setCats] = useState<Cat[]>([])
   const [selectedCat, setSelectedCat] = useState<number | null>(null)
   const [foodType, setFoodType] = useState<string | null>(null)
   const [weight, setWeight] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/cats')
+      .then(res => res.json())
+      .then(setCats)
+      .catch(err => {
+        logger.error('Failed to fetch cats:', err)
+        setError('Failed to load cats')
+      })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,6 +72,23 @@ export function MealForm({ onMealAdded }: MealFormProps) {
     }
   }
 
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setWeight(value)
+    }
+  }
+
+  if (cats.length === 0) {
+    return (
+      <Card className="p-4 w-full max-w-md mx-auto">
+        <div className="text-center text-muted-foreground">
+          No cats found. Please add cats in the settings page.
+        </div>
+      </Card>
+    )
+  }
+
   return (
     <Card className="p-4 w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -71,7 +99,7 @@ export function MealForm({ onMealAdded }: MealFormProps) {
         <div className="space-y-2">
           <label id="cat-label" className="text-sm font-medium">Select Cat</label>
           <div className="flex flex-wrap gap-2" aria-labelledby="cat-label">
-            {CATS.map((cat) => (
+            {cats.map((cat) => (
               <Button
                 key={cat.id}
                 type="button"
@@ -107,12 +135,19 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           <Input
             id="weight-input"
             type="number"
+            inputMode="decimal"
+            pattern="[0-9]*"
             value={weight}
-            onChange={(e) => setWeight(e.target.value)}
+            onChange={handleWeightChange}
             step="0.1"
+            min="0"
             className="w-full"
           />
         </div>
+
+        {selectedCat && (
+          <CalorieSummary selectedCatId={selectedCat} />
+        )}
 
         <Button 
           type="submit" 
