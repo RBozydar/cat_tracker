@@ -5,14 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ErrorAlert } from '@/components/error-alert'
+import { CalorieSummary } from './calorie-summary'
 import { logger } from '@/lib/logger'
 import type { Meal } from '@/lib/types'
-import { CalorieSummary } from "@/components/calorie-summary"
-
-type Cat = {
-  id: number
-  name: string
-}
 
 const FOOD_TYPES = [
   { id: 'WET', label: 'Wet Food' },
@@ -24,7 +19,7 @@ interface MealFormProps {
 }
 
 export function MealForm({ onMealAdded }: MealFormProps) {
-  const [cats, setCats] = useState<Cat[]>([])
+  const [cats, setCats] = useState<Array<{ id: number; name: string }>>([])
   const [selectedCat, setSelectedCat] = useState<number | null>(null)
   const [foodType, setFoodType] = useState<string | null>(null)
   const [weight, setWeight] = useState<string>('')
@@ -34,19 +29,16 @@ export function MealForm({ onMealAdded }: MealFormProps) {
     fetch('/api/cats')
       .then(res => res.json())
       .then(setCats)
-      .catch(err => {
-        logger.error('Failed to fetch cats:', err)
-        setError('Failed to load cats')
+      .catch(error => {
+        logger.error('Failed to fetch cats:', error)
       })
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCat || !foodType) return
+    if (!selectedCat || !foodType || !weight) return
 
     try {
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-
       const response = await fetch('/api/meals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,7 +46,7 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           catId: selectedCat,
           foodType,
           weight: parseFloat(weight),
-          timezone
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         }),
       })
 
@@ -68,10 +60,9 @@ export function MealForm({ onMealAdded }: MealFormProps) {
       setFoodType(null)
       setWeight('')
       setError(null)
-    } catch (err) {
-      const errorMessage = 'Could not save the meal, please try again later!'
-      logger.error('Failed to submit meal:', err)
-      setError(errorMessage)
+    } catch (error) {
+      logger.error('Failed to submit meal:', error)
+      setError('Could not save the meal, please try again later!')
     }
   }
 
@@ -92,29 +83,12 @@ export function MealForm({ onMealAdded }: MealFormProps) {
     )
   }
 
+  const isFormValid = selectedCat && foodType && parseFloat(weight) > 0
+
   return (
     <Card className="p-4 w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <ErrorAlert description={error} />
-        )}
-        
-        <div className="space-y-2">
-          <label id="food-type-label" className="text-sm font-medium">Food Type</label>
-          <div className="flex flex-wrap gap-2" aria-labelledby="food-type-label">
-            {FOOD_TYPES.map((type) => (
-              <Button
-                key={type.id}
-                type="button"
-                variant={foodType === type.id ? "default" : "outline"}
-                onClick={() => setFoodType(type.id)}
-                className="flex-1"
-              >
-                {type.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+        {error && <ErrorAlert description={error} />}
         
         <div className="space-y-2">
           <label id="cat-label" className="text-sm font-medium">Select Cat</label>
@@ -133,6 +107,22 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <label id="food-type-label" className="text-sm font-medium">Food Type</label>
+          <div className="flex flex-wrap gap-2" aria-labelledby="food-type-label">
+            {FOOD_TYPES.map((type) => (
+              <Button
+                key={type.id}
+                type="button"
+                variant={foodType === type.id ? "default" : "outline"}
+                onClick={() => setFoodType(type.id)}
+                className="flex-1"
+              >
+                {type.label}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         <div className="space-y-2">
           <label htmlFor="weight-input" className="text-sm font-medium">Weight (grams)</label>
@@ -149,14 +139,12 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           />
         </div>
 
-        {selectedCat && (
-          <CalorieSummary selectedCatId={selectedCat} />
-        )}
+        {selectedCat && <CalorieSummary selectedCatId={selectedCat} />}
 
         <Button 
           type="submit" 
           className="w-full"
-          disabled={!selectedCat || !foodType || !weight}
+          disabled={!isFormValid}
         >
           Record Meal
         </Button>

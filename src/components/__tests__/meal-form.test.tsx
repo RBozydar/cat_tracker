@@ -56,22 +56,33 @@ describe('MealForm', () => {
     })
 
     const submitButton = screen.getByRole('button', { name: /record meal/i })
-    expect(submitButton).toBeDisabled()
+    expect(submitButton).toHaveAttribute('disabled')
 
     // Select a cat but leave other fields empty
-    await user.click(screen.getByText('Ahmed'))
-    expect(submitButton).toBeDisabled()
+    await act(async () => {
+      await user.click(screen.getByText('Ahmed'))
+    })
+    expect(submitButton).toHaveAttribute('disabled')
 
     // Add food type but leave weight empty
-    await user.click(screen.getByText('Wet Food'))
-    expect(submitButton).toBeDisabled()
+    await act(async () => {
+      await user.click(screen.getByText('Wet Food'))
+    })
+    expect(submitButton).toHaveAttribute('disabled')
 
     // Add weight of 0 (should still be disabled)
     const input = screen.getByLabelText('Weight (grams)')
-    await user.clear(input)
-    await user.type(input, '0')
+    await act(async () => {
+      await user.clear(input)
+      await user.type(input, '0')
+    })
     
-    expect(submitButton).toBeDisabled()
+    // Wait for next tick to allow React to update
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+    
+    expect(submitButton).toHaveAttribute('disabled')
   })
 
   it('prevents form submission with invalid weight', async () => {
