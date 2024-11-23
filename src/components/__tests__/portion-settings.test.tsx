@@ -17,7 +17,10 @@ describe('PortionSettingsForm', () => {
       new Response(JSON.stringify({
         suggestPortionSizes: false,
         mealsPerDay: 2
-      }), { status: 200 })
+      }), { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
     )
 
     await act(async () => {
@@ -34,7 +37,10 @@ describe('PortionSettingsForm', () => {
       new Response(JSON.stringify({
         suggestPortionSizes: true,
         mealsPerDay: 3
-      }), { status: 200 })
+      }), { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
     )
 
     await act(async () => {
@@ -52,13 +58,19 @@ describe('PortionSettingsForm', () => {
         new Response(JSON.stringify({
           suggestPortionSizes: false,
           mealsPerDay: 2
-        }), { status: 200 })
+        }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({
           suggestPortionSizes: true,
           mealsPerDay: 2
-        }), { status: 200 })
+        }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
       )
 
     await act(async () => {
@@ -83,9 +95,17 @@ describe('PortionSettingsForm', () => {
         new Response(JSON.stringify({
           suggestPortionSizes: false,
           mealsPerDay: 2
-        }), { status: 200 })
+        }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
       )
-      .mockRejectedValueOnce(new Error('Failed to update'))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'Failed to update' }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      )
 
     await act(async () => {
       render(<PortionSettingsForm />)
@@ -104,7 +124,10 @@ describe('PortionSettingsForm', () => {
         new Response(JSON.stringify({
           suggestPortionSizes: true,
           mealsPerDay: 2
-        }), { status: 200 })
+        }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
       )
 
     await act(async () => {

@@ -40,12 +40,20 @@ export function PortionSettingsForm() {
         body: JSON.stringify({ [key]: value })
       })
 
-      if (!response.ok) throw new Error('Failed to update portion settings')
+      const data = await response.json()
 
-      const updatedSettings = await response.json()
-      setSettings(updatedSettings)
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update portion settings')
+      }
+
+      setSettings(data)
     } catch (error) {
       logger.error('Failed to update portion settings:', error)
+      // Revert the setting to its previous value
+      setSettings(prev => ({
+        ...prev,
+        [key]: prev[key]
+      }))
     }
   }
 
