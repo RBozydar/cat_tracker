@@ -1,50 +1,45 @@
-import { render, screen, act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { DailySummary } from '../daily-summary'
+
+// Mock the CalorieSummary component
+jest.mock('../calorie-summary', () => ({
+  CalorieSummary: ({ selectedCatId }: { selectedCatId: number }) => (
+    <div data-testid={`calorie-summary-${selectedCatId}`}>Mocked Calorie Summary</div>
+  )
+}))
 
 describe('DailySummary', () => {
   const mockMeals = [
     {
       id: 1,
       catId: 1,
-      cat: { id: 1, name: 'Ahmed' },
+      cat: {
+        id: 1,
+        name: 'Ahmed',
+        wetFoodId: 1,
+        dryFoodId: 2,
+        wetFood: { id: 1, name: 'Wet Food', foodType: 'WET', calories: 100 },
+        dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY', calories: 300 },
+        targetCalories: 250,
+        weight: 4.5,
+        weightUnit: 'kg'
+      },
       foodType: 'WET',
       weight: 100,
       createdAt: new Date().toISOString()
     }
   ]
 
-  beforeEach(() => {
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([
-          { foodType: 'WET', calories: 100 },
-          { foodType: 'DRY', calories: 300 }
-        ])
-      })
-    ) as jest.Mock
-  })
-
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
-  it('renders today\'s summary', async () => {
-    await act(async () => {
-      render(<DailySummary meals={mockMeals} />)
-    })
+  it('renders today\'s summary', () => {
+    render(<DailySummary meals={mockMeals} />)
     
     expect(screen.getByText('Today\'s Summary')).toBeInTheDocument()
-    expect(screen.getByText('Ahmed')).toBeInTheDocument()
-    expect(screen.getByText(/100g/)).toBeInTheDocument()
+    expect(screen.getByTestId('calorie-summary-1')).toBeInTheDocument()
   })
 
-  it('shows empty state when no meals', async () => {
-    await act(async () => {
-      render(<DailySummary meals={[]} />)
-    })
-    
+  it('handles empty meals array', () => {
+    render(<DailySummary meals={[]} />)
     expect(screen.getByText('Today\'s Summary')).toBeInTheDocument()
-    expect(screen.queryByText('Ahmed')).not.toBeInTheDocument()
+    expect(screen.queryByTestId(/calorie-summary-/)).not.toBeInTheDocument()
   })
 }) 

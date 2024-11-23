@@ -1,5 +1,6 @@
 import { FoodSettingsTable } from '@/components/food-settings-table'
 import { CatSettingsTable } from '@/components/cat-settings-table'
+import { PortionSettingsForm } from '@/components/portion-settings'
 import { Separator } from '@/components/ui/separator'
 
 export default function SettingsPage() {
@@ -16,6 +17,13 @@ export default function SettingsPage() {
         <div>
           <h2 className="text-3xl font-bold mb-8">Cat Settings</h2>
           <CatSettingsTable />
+        </div>
+
+        <Separator />
+        
+        <div>
+          <h2 className="text-3xl font-bold mb-8">Portion Settings</h2>
+          <PortionSettingsForm />
         </div>
       </div>
     </main>

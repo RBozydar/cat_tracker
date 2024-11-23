@@ -16,12 +16,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy necessary files
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma/schema.prisma ./prisma/
-COPY --from=builder /app/prisma/seed.ts ./prisma/
 COPY --from=builder /app/package.json ./package.json
 COPY scripts/start.sh ./start.sh
 
@@ -34,7 +28,13 @@ RUN mkdir -p /data && chmod 777 /data
 
 # Make the startup script executable
 RUN chmod +x ./start.sh
-
+FROM runner as pre-production
+# Copy necessary files
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma/schema.prisma ./prisma/
+COPY --from=builder /app/prisma/seed.ts ./prisma/
 EXPOSE 3000
 
 ENV PORT 3000

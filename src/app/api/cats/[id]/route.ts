@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { logger } from '@/lib/logger'
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -11,10 +12,8 @@ const updateSchema = z.object({
   weightUnit: z.enum(['kg', 'lbs']).optional()
 })
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const id = await Promise.resolve(params.id)
     const body = await request.json()
@@ -38,10 +37,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const id = await Promise.resolve(params.id)
     
@@ -51,16 +48,20 @@ export async function DELETE(
     
     return new NextResponse(null, { status: 204 })
   } catch (error) {
-    return NextResponse.json({ error: 'Delete failed' }, { status: 500 })
+    console.error('Failed to delete cat:', error)
+    return NextResponse.json({ 
+      error: 'Delete failed', 
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 }
 
 export async function GET(
   _request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const parsedId = parseInt(context.params.id)
+    const parsedId = parseInt((await context.params).id)
     
     const cat = await prisma.cat.findUnique({
       where: { id: parsedId },
@@ -75,7 +76,8 @@ export async function GET(
     }
     
     return NextResponse.json(cat)
-  } catch (error) {
+  } catch (err: unknown) {
+    logger.error('Failed to fetch cat:', err)
     return NextResponse.json({ error: 'Failed to fetch cat' }, { status: 500 })
   }
 } 

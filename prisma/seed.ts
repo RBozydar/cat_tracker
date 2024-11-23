@@ -7,59 +7,75 @@ async function main() {
   await prisma.meal.deleteMany()
   await prisma.cat.deleteMany()
   await prisma.foodSettings.deleteMany()
+  await prisma.portionSettings.deleteMany()
 
   // Create default food settings first
   const wetFood = await prisma.foodSettings.create({
     data: {
-      name: "Royal Canin Wet",
+      name: "LovCat",
       foodType: "WET",
-      calories: 117,
-      catsWet: { create: [] }
+      calories: 117
     }
   })
 
-  const dryFood = await prisma.foodSettings.create({
-    data: {
-      name: "Royal Canin Dry",
-      foodType: "DRY",
-      calories: 370,
-      catsDry: { create: [] }
-    }
-  })
+  const [fitTrim, kitten] = await Promise.all([
+    prisma.foodSettings.create({
+      data: {
+        name: "Orijen Fit & Trim",
+        foodType: "DRY",
+        calories: 370
+      }
+    }),
+    prisma.foodSettings.create({
+      data: {
+        name: "Orijen Kitten",
+        foodType: "DRY",
+        calories: 370
+      }
+    })
+  ])
 
-  // Create cats with proper relations
+  // Create cats with direct ID references
   await Promise.all([
     prisma.cat.create({
       data: {
         name: 'Ahmed',
-        wetFood: { connect: { id: wetFood.id } },
-        dryFood: { connect: { id: dryFood.id } },
-        targetCalories: 250,
-        weight: 4.5,
+        wetFoodId: wetFood.id,
+        dryFoodId: fitTrim.id,
+        targetCalories: 200,
+        weight: 5.5,
         weightUnit: 'kg'
       }
     }),
     prisma.cat.create({
       data: {
         name: 'Knypson',
-        wetFood: { connect: { id: wetFood.id } },
-        dryFood: { connect: { id: dryFood.id } },
-        targetCalories: 220,
-        weight: 3.8,
+        wetFoodId: wetFood.id,
+        dryFoodId: kitten.id,
+        targetCalories: 235,
+        weight: 2.15,
         weightUnit: 'kg'
       }
     }),
     prisma.cat.create({
       data: {
         name: 'Lila',
-        wetFood: { connect: { id: wetFood.id } },
-        dryFood: { connect: { id: dryFood.id } },
-        targetCalories: 200,
-        weight: 3.2,
+        wetFoodId: wetFood.id,
+        dryFoodId: kitten.id,
+        targetCalories: 280,
+        weight: 2.4,
         weightUnit: 'kg'
       }
     })
   ])
+
+  // Create default portion settings
+  await prisma.portionSettings.create({
+    data: {
+      suggestPortionSizes: false,
+      mealsPerDay: 2
+    }
+  })
 }
 
 main()

@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button"
 import { Plus, Trash2 } from "lucide-react"
 import { logger } from "@/lib/logger"
 import { SuccessAlert } from "./success-alert"
-import debounce from 'lodash/debounce'
 import { DeleteConfirmation } from "./delete-confirmation"
 
 type Cat = {
@@ -50,7 +49,6 @@ type Alert = {
 const WEIGHT_UNITS = ['kg', 'lbs']
 
 export function CatSettingsTable() {
-  const [cats, setCats] = React.useState<Cat[]>([])
   const [localCats, setLocalCats] = React.useState<Cat[]>([])
   const [foods, setFoods] = React.useState<FoodSetting[]>([])
   const [newCat, setNewCat] = React.useState<Partial<Cat> | null>(null)
@@ -62,7 +60,6 @@ export function CatSettingsTable() {
     fetch('/api/cats')
       .then(res => res.json())
       .then(data => {
-        setCats(data)
         setLocalCats(data)
       })
 
@@ -82,62 +79,39 @@ export function CatSettingsTable() {
   const wetFoods = foods.filter(f => f.foodType === 'WET')
   const dryFoods = foods.filter(f => f.foodType === 'DRY')
 
-  const debouncedUpdate = React.useCallback(
-    debounce(async (id: number, field: keyof Cat, value: string | number, originalValue: string | number) => {
+  const debouncedUpdate = React.useCallback((
+    id: number, 
+    field: keyof Cat, 
+    value: string | number, 
+    originalValue: string | number
+  ) => {
+    const timer = setTimeout(async () => {
       try {
         const response = await fetch(`/api/cats/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [field]: value }),
+          body: JSON.stringify({ [field]: value })
         })
 
         if (!response.ok) throw new Error('Failed to update')
-
-        const updatedCat = await response.json()
-        setCats(prev => prev.map(cat => cat.id === id ? updatedCat : cat))
-
-        const cat = cats.find(c => c.id === id)
-        if (cat) {
-          let message = ''
-          switch (field) {
-            case 'name':
-              message = `Changed name from "${originalValue}" to "${value}"`
-              break
-            case 'weight':
-              message = `Updated weight from ${originalValue} to ${value} ${cat.weightUnit}`
-              break
-            case 'weightUnit':
-              message = `Changed weight unit from ${originalValue} to ${value}`
-              break
-            case 'targetCalories':
-              message = `Updated target calories from ${originalValue} to ${value} kcal`
-              break
-            case 'wetFoodId':
-            case 'dryFoodId':
-              const foodType = field === 'wetFoodId' ? 'wet' : 'dry'
-              const oldFood = foods.find(f => f.id === originalValue)?.name
-              const newFood = foods.find(f => f.id === value)?.name
-              message = `Changed ${foodType} food from "${oldFood}" to "${newFood}"`
-              break
-          }
-          setAlert({
-            type: 'success',
-            title: `Updated ${cat.name}`,
-            message
-          })
-        }
+        
+        setAlert({
+          type: 'success',
+          message: `Updated ${field} successfully`
+        })
       } catch (error) {
         logger.error('Failed to update cat:', error)
-        setLocalCats(cats)
-        setAlert({
-          type: 'warning',
-          title: 'Update Failed',
-          message: 'Failed to update cat. Changes have been reverted.'
-        })
+        // Revert the local state
+        setLocalCats(prev => 
+          prev.map(cat => 
+            cat.id === id ? { ...cat, [field]: originalValue } : cat
+          )
+        )
       }
-    }, 500),
-    [cats, foods]
-  )
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, []) // Empty deps array since we don't use any external values
 
   const handleLocalUpdate = (id: number, field: keyof Cat, value: string | number) => {
     const originalCat = localCats.find(c => c.id === id)
@@ -178,7 +152,6 @@ export function CatSettingsTable() {
       if (!response.ok) throw new Error('Failed to create')
 
       const created = await response.json()
-      setCats(prev => [...prev, created])
       setLocalCats(prev => [...prev, created])
       setNewCat(null)
       setAlert({
@@ -198,7 +171,6 @@ export function CatSettingsTable() {
 
       if (!response.ok) throw new Error('Failed to delete')
 
-      setCats(prev => prev.filter(cat => cat.id !== id))
       setLocalCats(prev => prev.filter(cat => cat.id !== id))
       setAlert({
         type: 'warning',

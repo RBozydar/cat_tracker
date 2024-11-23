@@ -45,6 +45,8 @@ export function MealForm({ onMealAdded }: MealFormProps) {
     if (!selectedCat || !foodType) return
 
     try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
       const response = await fetch('/api/meals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,6 +54,7 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           catId: selectedCat,
           foodType,
           weight: parseFloat(weight),
+          timezone
         }),
       })
 
@@ -97,6 +100,23 @@ export function MealForm({ onMealAdded }: MealFormProps) {
         )}
         
         <div className="space-y-2">
+          <label id="food-type-label" className="text-sm font-medium">Food Type</label>
+          <div className="flex flex-wrap gap-2" aria-labelledby="food-type-label">
+            {FOOD_TYPES.map((type) => (
+              <Button
+                key={type.id}
+                type="button"
+                variant={foodType === type.id ? "default" : "outline"}
+                onClick={() => setFoodType(type.id)}
+                className="flex-1"
+              >
+                {type.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+        
+        <div className="space-y-2">
           <label id="cat-label" className="text-sm font-medium">Select Cat</label>
           <div className="flex flex-wrap gap-2" aria-labelledby="cat-label">
             {cats.map((cat) => (
@@ -113,22 +133,6 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label id="food-type-label" className="text-sm font-medium">Food Type</label>
-          <div className="flex flex-wrap gap-2" aria-labelledby="food-type-label">
-            {FOOD_TYPES.map((type) => (
-              <Button
-                key={type.id}
-                type="button"
-                variant={foodType === type.id ? "default" : "outline"}
-                onClick={() => setFoodType(type.id)}
-                className="flex-1"
-              >
-                {type.label}
-              </Button>
-            ))}
-          </div>
-        </div>
 
         <div className="space-y-2">
           <label htmlFor="weight-input" className="text-sm font-medium">Weight (grams)</label>

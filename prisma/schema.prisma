@@ -36,4 +36,10 @@ model FoodSettings {
   calories  Float    // calories per 100g
   catsWet   Cat[]    @relation("CatWetFood")
   catsDry   Cat[]    @relation("CatDryFood")
+}
+
+model PortionSettings {
+  id                    Int      @id @default(autoincrement())
+  suggestPortionSizes   Boolean  @default(false)
+  mealsPerDay          Int      @default(2)
 } 

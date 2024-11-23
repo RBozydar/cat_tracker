@@ -8,10 +8,8 @@ const updateSchema = z.object({
   calories: z.number().min(0).optional(),
 })
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const id = await Promise.resolve(params.id)
     const body = await request.json()
@@ -31,10 +29,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const id = await Promise.resolve(params.id)
     
@@ -44,6 +40,10 @@ export async function DELETE(
     
     return new NextResponse(null, { status: 204 })
   } catch (error) {
-    return NextResponse.json({ error: 'Delete failed' }, { status: 500 })
+    console.error('Failed to delete food settings:', error)
+    return NextResponse.json({ 
+      error: 'Delete failed',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 } 
