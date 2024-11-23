@@ -13,13 +13,12 @@ describe('PortionSettingsForm', () => {
   })
 
   it('renders settings form with default values', async () => {
-    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+      new Response(JSON.stringify({
         suggestPortionSizes: false,
         mealsPerDay: 2
-      })
-    })
+      }), { status: 200 })
+    )
 
     await act(async () => {
       render(<PortionSettingsForm />)
@@ -31,13 +30,12 @@ describe('PortionSettingsForm', () => {
   })
 
   it('shows meals per day input when portions are enabled', async () => {
-    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+      new Response(JSON.stringify({
         suggestPortionSizes: true,
         mealsPerDay: 3
-      })
-    })
+      }), { status: 200 })
+    )
 
     await act(async () => {
       render(<PortionSettingsForm />)
@@ -50,20 +48,18 @@ describe('PortionSettingsForm', () => {
 
   it('updates settings when changed', async () => {
     ;(global.fetch as jest.Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
           suggestPortionSizes: false,
           mealsPerDay: 2
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
+        }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
           suggestPortionSizes: true,
           mealsPerDay: 2
-        })
-      })
+        }), { status: 200 })
+      )
 
     await act(async () => {
       render(<PortionSettingsForm />)
@@ -83,13 +79,12 @@ describe('PortionSettingsForm', () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
     
     ;(global.fetch as jest.Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
           suggestPortionSizes: false,
           mealsPerDay: 2
-        })
-      })
+        }), { status: 200 })
+      )
       .mockRejectedValueOnce(new Error('Failed to update'))
 
     await act(async () => {
@@ -105,13 +100,12 @@ describe('PortionSettingsForm', () => {
 
   it('validates meals per day input', async () => {
     ;(global.fetch as jest.Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
           suggestPortionSizes: true,
           mealsPerDay: 2
-        })
-      })
+        }), { status: 200 })
+      )
 
     await act(async () => {
       render(<PortionSettingsForm />)

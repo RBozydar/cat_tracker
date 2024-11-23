@@ -1,6 +1,16 @@
 import { GET, PATCH } from '../portion-settings/route'
 import { prisma } from '@/lib/db'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+// Mock NextResponse
+jest.mock('next/server', () => ({
+  ...jest.requireActual('next/server'),
+  NextResponse: {
+    json: (data: any, init?: ResponseInit) => {
+      return new Response(JSON.stringify(data), init)
+    }
+  }
+}))
 
 // Mock Prisma
 jest.mock('@/lib/db', () => ({
@@ -28,8 +38,7 @@ describe('Portion Settings API', () => {
 
       ;(prisma.portionSettings.findFirst as jest.Mock).mockResolvedValue(mockSettings)
 
-      const request = new NextRequest('http://localhost:3000/api/portion-settings')
-      const response = await GET(request)
+      const response = await GET()
       const data = await response.json()
 
       expect(data).toEqual(mockSettings)
