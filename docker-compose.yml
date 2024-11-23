@@ -30,7 +30,7 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.cattrack.rule=Host(`cattrack.local.{DOMAINNAME}`, `cattrack.local.${HOST_SUBDOMAIN}.{DOMAINNAME}`, `cattrack.${HOST_SUBDOMAIN}.{DOMAINNAME}`, `cattrack.{DOMAINNAME}`)"
+      - "traefik.http.routers.cattrack.rule=Host(`cattrack.local.bozydar.me`, `cattrack.local.${HOST_SUBDOMAIN}.bozydar.me`, `cattrack.${HOST_SUBDOMAIN}.bozydar.me`, `cattrack.bozydar.me`)"
       - "traefik.http.routers.cattrack.entrypoints=https"
       - "traefik.http.routers.cattrack.tls=true"
       - "traefik.http.services.cattrack.loadbalancer.server.port=3000"
