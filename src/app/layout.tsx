@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
+import { NavMenu } from '@/components/nav-menu'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Toaster } from '@/components/ui/toaster'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -25,7 +27,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <div className="min-h-screen flex flex-col">
+            <header className="border-b">
+              <div className="container mx-auto py-4 flex items-center justify-between">
+                <NavMenu />
+                <ThemeToggle />
+              </div>
+            </header>
+            {children}
+          </div>
           <Toaster />
         </ThemeProvider>
       </body>
