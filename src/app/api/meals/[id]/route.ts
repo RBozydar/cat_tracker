@@ -57,9 +57,9 @@ export async function PATCH(
 export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
-) {
+): Promise<Response> {
   try {
-    const mealId = parseInt(await params.id)
+    const mealId = parseInt(params.id)
     await prisma.meal.delete({
       where: { id: mealId }
     })
