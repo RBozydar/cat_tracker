@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { z } from 'zod'
 import { localDateToUTC } from '@/lib/date-utils'
 
@@ -12,7 +12,7 @@ const updateSchema = z.object({
 })
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -55,7 +55,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ): Promise<Response> {
   try {
