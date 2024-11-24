@@ -1,26 +1,40 @@
 import { prisma } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { localDateToUTC, debugTimezone, getLastNDaysRange } from '@/lib/date-utils'
 
 const createSchema = z.object({
   catId: z.number().positive(),
   foodType: z.enum(['WET', 'DRY']),
   weight: z.number().positive(),
-  timezone: z.string().optional()
+  timezone: z.string()
 })
+
+interface WhereClause {
+  catId?: number
+  createdAt?: {
+    gte: string
+    lte: string
+  }
+}
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const validated = createSchema.parse(body)
-    const mealData = {
-      catId: validated.catId,
-      foodType: validated.foodType,
-      weight: validated.weight
-    }
+    
+    const now = new Date()
+    debugTimezone(now, 'Before UTC conversion')
+    const createdAt = localDateToUTC(now, validated.timezone)
+    debugTimezone(createdAt, 'After UTC conversion')
     
     const meal = await prisma.meal.create({
-      data: mealData,
+      data: {
+        catId: validated.catId,
+        foodType: validated.foodType,
+        weight: validated.weight,
+        createdAt
+      },
       include: {
         cat: {
           include: {
@@ -36,6 +50,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
     }
+    console.error('Failed to create meal:', error)
     return NextResponse.json({ error: 'Creation failed' }, { status: 500 })
   }
 }
@@ -47,60 +62,47 @@ export async function GET(request: Request) {
   const timezone = searchParams.get('timezone') || 'UTC'
 
   try {
-    interface QueryParams {
-      where?: {
-        catId?: number;
-        createdAt?: {
-          gte: Date;
-          lte: Date;
-        };
-      };
-      include?: {
-        cat: boolean | { include: { wetFood: boolean; dryFood: boolean } };
-      };
-      orderBy?: {
-        createdAt: 'desc' | 'asc';
-      };
+    const whereClause: WhereClause = {}
+    
+    if (catId) {
+      whereClause.catId = parseInt(catId)
     }
 
-    const query: QueryParams = {
+    if (dateStr) {
+      const date = new Date(dateStr)
+      const startOfDay = new Date(date)
+      const endOfDay = new Date(date)
+      
+      startOfDay.setHours(0, 0, 0, 0)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      whereClause.createdAt = {
+        gte: localDateToUTC(startOfDay, timezone),
+        lte: localDateToUTC(endOfDay, timezone)
+      }
+    } else {
+      const { start, end } = getLastNDaysRange(7)
+      whereClause.createdAt = {
+        gte: start.toISOString(),
+        lte: end.toISOString()
+      }
+    }
+
+    const meals = await prisma.meal.findMany({
+      where: whereClause,
       include: {
-        cat: true
+        cat: {
+          include: {
+            wetFood: true,
+            dryFood: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
       }
-    }
-
-    if (catId) {
-      query.where = {
-        ...query.where,
-        catId: parseInt(catId)
-      }
-    }
-
-    if (dateStr) {
-      const localDate = new Date(dateStr)
-      const offset = new Date(localDate.toLocaleString('en-US', { timeZone: timezone })).getTimezoneOffset()
-      
-      const startOfDay = new Date(localDate)
-      startOfDay.setHours(0, 0, 0, 0)
-      startOfDay.setMinutes(startOfDay.getMinutes() - offset)
-      
-      const endOfDay = new Date(localDate)
-      endOfDay.setHours(23, 59, 59, 999)
-      endOfDay.setMinutes(endOfDay.getMinutes() - offset)
-
-      query.where = {
-        ...query.where,
-        createdAt: {
-          gte: startOfDay,
-          lte: endOfDay
-        }
-      }
-    }
-
-    const meals = await prisma.meal.findMany(query)
+    })
+    
     return NextResponse.json(meals)
   } catch (error) {
     console.error('Failed to fetch meals:', error)

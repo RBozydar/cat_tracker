@@ -1,38 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ErrorAlert } from '@/components/error-alert'
-import { CalorieSummary } from './calorie-summary'
+import { MealFormCalorieSummary } from './meal-form-calorie-summary'
+import { ResponsiveCatSelector } from './responsive-cat-selector'
+import { ResponsiveCatSelectorSkeleton } from './responsive-cat-selector-skeleton'
+import { useMeals } from '@/contexts/meal-context'
 import { logger } from '@/lib/logger'
-import type { Meal } from '@/lib/types'
+import { getUserTimezone } from '@/lib/date-utils'
+import { MealFormSkeleton } from './meal-form-skeleton'
 
 const FOOD_TYPES = [
   { id: 'WET', label: 'Wet Food' },
   { id: 'DRY', label: 'Dry Food' },
 ]
 
-interface MealFormProps {
-  onMealAdded: (meal: Meal) => void
+export function MealFormWrapper() {
+  return (
+    <Suspense fallback={<MealFormSkeleton />}>
+      <MealForm />
+    </Suspense>
+  )
 }
 
-export function MealForm({ onMealAdded }: MealFormProps) {
-  const [cats, setCats] = useState<Array<{ id: number; name: string }>>([])
+function MealForm() {
+  const { addMeal } = useMeals()
   const [selectedCat, setSelectedCat] = useState<number | null>(null)
   const [foodType, setFoodType] = useState<string | null>(null)
   const [weight, setWeight] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch('/api/cats')
-      .then(res => res.json())
-      .then(setCats)
-      .catch(error => {
-        logger.error('Failed to fetch cats:', error)
-      })
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,7 +45,7 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           catId: selectedCat,
           foodType,
           weight: parseFloat(weight),
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          timezone: getUserTimezone()
         }),
       })
 
@@ -55,7 +54,7 @@ export function MealForm({ onMealAdded }: MealFormProps) {
       }
 
       const meal = await response.json()
-      onMealAdded(meal)
+      addMeal(meal)
       setSelectedCat(null)
       setFoodType(null)
       setWeight('')
@@ -73,38 +72,20 @@ export function MealForm({ onMealAdded }: MealFormProps) {
     }
   }
 
-  if (cats.length === 0) {
-    return (
-      <Card className="p-4 w-full max-w-md mx-auto">
-        <div className="text-center text-muted-foreground">
-          No cats found. Please add cats in the settings page.
-        </div>
-      </Card>
-    )
-  }
-
-  const isFormValid = selectedCat && foodType && parseFloat(weight) > 0
-
   return (
     <Card className="p-4 w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && <ErrorAlert description={error} />}
         
-        <div className="space-y-2">
-          <label id="cat-label" className="text-sm font-medium">Select Cat</label>
-          <div className="flex flex-wrap gap-2" aria-labelledby="cat-label">
-            {cats.map((cat) => (
-              <Button
-                key={cat.id}
-                type="button"
-                variant={selectedCat === cat.id ? "default" : "outline"}
-                onClick={() => setSelectedCat(cat.id)}
-                className="flex-1 min-w-[100px]"
-              >
-                {cat.name}
-              </Button>
-            ))}
-          </div>
+        <div className="space-y-2 flex flex-col items-center">
+          <label className="text-sm font-medium">Select Cat</label>
+          <Suspense fallback={<ResponsiveCatSelectorSkeleton breakpoint={300} />}>
+            <ResponsiveCatSelector
+              value={selectedCat}
+              onChange={setSelectedCat}
+              breakpoint={300}
+            />
+          </Suspense>
         </div>
 
         <div className="space-y-2">
@@ -139,12 +120,12 @@ export function MealForm({ onMealAdded }: MealFormProps) {
           />
         </div>
 
-        {selectedCat && <CalorieSummary selectedCatId={selectedCat} />}
+        {selectedCat && <MealFormCalorieSummary selectedCatId={selectedCat} />}
 
         <Button 
           type="submit" 
           className="w-full"
-          disabled={!isFormValid}
+          disabled={!selectedCat || !foodType || !weight}
         >
           Record Meal
         </Button>

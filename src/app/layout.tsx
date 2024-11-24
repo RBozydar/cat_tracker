@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { NavMenu } from '@/components/nav-menu'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Toaster } from '@/components/ui/toaster'
+import { MealProvider } from '@/contexts/meal-context'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,15 +28,17 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen flex flex-col">
-            <header className="border-b">
-              <div className="container mx-auto py-4 flex items-center justify-between">
-                <NavMenu />
-                <ThemeToggle />
-              </div>
-            </header>
-            {children}
-          </div>
+          <MealProvider>
+            <div className="min-h-screen flex flex-col">
+              <header className="border-b">
+                <div className="container mx-auto py-4 flex items-center justify-between">
+                  <NavMenu />
+                  <ThemeToggle />
+                </div>
+              </header>
+              {children}
+            </div>
+          </MealProvider>
           <Toaster />
         </ThemeProvider>
       </body>

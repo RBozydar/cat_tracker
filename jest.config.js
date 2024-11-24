@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
@@ -11,6 +12,12 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      useESM: false,
+    }],
+  },
+  modulePathIgnorePatterns: ['node_modules/punycode/'],
 }
 
 module.exports = createJestConfig(customJestConfig) 

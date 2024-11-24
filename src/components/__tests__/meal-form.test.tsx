@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MealForm } from '../meal-form'
+import { MealFormWrapper } from '../meal-form'
 import '@testing-library/jest-dom'
 
 // Mock the CalorieSummary component
@@ -21,8 +21,17 @@ const mockDateTimeFormat = {
 
 global.Intl.DateTimeFormat = jest.fn(() => mockDateTimeFormat) as unknown as typeof Intl.DateTimeFormat
 
-describe('MealForm', () => {
-  const mockOnMealAdded = jest.fn()
+const mockAddMeal = jest.fn()
+
+// Mock MealContext
+jest.mock('@/contexts/meal-context', () => ({
+  useMeals: () => ({
+    addMeal: mockAddMeal,
+    loading: false
+  })
+}))
+
+describe('MealFormWrapper', () => {
   const user = userEvent.setup()
 
   const mockCats = [
@@ -52,7 +61,7 @@ describe('MealForm', () => {
 
   it('disables submit button when form is incomplete', async () => {
     await act(async () => {
-      render(<MealForm onMealAdded={mockOnMealAdded} />)
+      render(<MealFormWrapper />)
     })
 
     const submitButton = screen.getByRole('button', { name: /record meal/i })
@@ -87,7 +96,7 @@ describe('MealForm', () => {
 
   it('prevents form submission with invalid weight', async () => {
     await act(async () => {
-      render(<MealForm onMealAdded={mockOnMealAdded} />)
+      render(<MealFormWrapper />)
     })
 
     const input = screen.getByLabelText('Weight (grams)') as HTMLInputElement
@@ -111,7 +120,7 @@ describe('MealForm', () => {
     )
 
     await act(async () => {
-      render(<MealForm onMealAdded={mockOnMealAdded} />)
+      render(<MealFormWrapper />)
     })
 
     expect(screen.getByText('No cats found. Please add cats in the settings page.')).toBeInTheDocument()
@@ -135,7 +144,7 @@ describe('MealForm', () => {
       }))
 
     await act(async () => {
-      render(<MealForm onMealAdded={mockOnMealAdded} />)
+      render(<MealFormWrapper />)
     })
     
     // Fill form
@@ -162,7 +171,7 @@ describe('MealForm', () => {
       })
     })
     
-    expect(mockOnMealAdded).toHaveBeenCalled()
+    expect(mockAddMeal).toHaveBeenCalled()
   })
 
   it('shows error message when submission fails', async () => {
@@ -177,7 +186,7 @@ describe('MealForm', () => {
       }))
 
     await act(async () => {
-      render(<MealForm onMealAdded={mockOnMealAdded} />)
+      render(<MealFormWrapper />)
     })
     
     // Fill and submit form
