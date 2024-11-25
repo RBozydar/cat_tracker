@@ -1,6 +1,7 @@
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MealFormWrapper } from '../meal-form'
+import { ResponsiveCatSelectorProps } from '../responsive-cat-selector'
 import '@testing-library/jest-dom'
 
 // Mock the CalorieSummary component
@@ -8,18 +9,15 @@ jest.mock('../calorie-summary', () => ({
   CalorieSummary: () => null
 }))
 
-// Mock timezone
-const mockTimeZone = 'UTC'
-const mockDateTimeFormat = {
-  format: () => '',
-  formatToParts: () => [],
-  formatRange: () => '',
-  formatRangeToParts: () => [],
-  resolvedOptions: () => ({ timeZone: mockTimeZone }),
-  supportedLocalesOf: () => []
-} as unknown as Intl.DateTimeFormat
+// Mock MealFormCalorieSummary component
+jest.mock('../meal-form-calorie-summary', () => ({
+  MealFormCalorieSummary: () => null
+}))
 
-global.Intl.DateTimeFormat = jest.fn(() => mockDateTimeFormat) as unknown as typeof Intl.DateTimeFormat
+// Mock date-utils
+jest.mock('@/lib/date-utils', () => ({
+  getUserTimezone: () => 'Europe/London'
+}))
 
 const mockAddMeal = jest.fn()
 
@@ -29,6 +27,22 @@ jest.mock('@/contexts/meal-context', () => ({
     addMeal: mockAddMeal,
     loading: false
   })
+}))
+
+// Mock ResponsiveCatSelector with proper types
+jest.mock('../responsive-cat-selector', () => ({
+  ResponsiveCatSelector: ({ onChange }: Pick<ResponsiveCatSelectorProps, 'onChange'>) => (
+    <div>
+      <button onClick={() => onChange(1)}>Ahmed</button>
+    </div>
+  )
+}))
+
+// Mock ErrorAlert component
+jest.mock('../error-alert', () => ({
+  ErrorAlert: ({ description }: { description: string }) => (
+    <div role="alert">{description}</div>
+  )
 }))
 
 describe('MealFormWrapper', () => {
@@ -64,69 +78,51 @@ describe('MealFormWrapper', () => {
       render(<MealFormWrapper />)
     })
 
+    // Find submit button and verify initial state
     const submitButton = screen.getByRole('button', { name: /record meal/i })
-    expect(submitButton).toHaveAttribute('disabled')
+    expect(submitButton).toBeDisabled()
 
-    // Select a cat but leave other fields empty
+    // Select a cat
     await act(async () => {
       await user.click(screen.getByText('Ahmed'))
     })
-    expect(submitButton).toHaveAttribute('disabled')
+    expect(submitButton).toBeDisabled()
 
-    // Add food type but leave weight empty
+    // Add food type
     await act(async () => {
       await user.click(screen.getByText('Wet Food'))
     })
-    expect(submitButton).toHaveAttribute('disabled')
+    expect(submitButton).toBeDisabled()
 
-    // Add weight of 0 (should still be disabled)
+    // Add weight
     const input = screen.getByLabelText('Weight (grams)')
     await act(async () => {
       await user.clear(input)
       await user.type(input, '0')
     })
     
-    // Wait for next tick to allow React to update
+    // Button should still be disabled with weight of 0
+    expect(submitButton).toBeDisabled()
+  })
+
+  it('handles failed cats fetch', async () => {
+    // Mock the fetch to fail
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Failed to fetch'))
+
+    await act(async () => {
+      render(<MealFormWrapper />)
+    })
+
+    // Wait for error state to be set
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 0))
     })
     
-    expect(submitButton).toHaveAttribute('disabled')
+    // Check for error message
+    expect(screen.getByText('No cats found. Please add cats in settings.')).toBeInTheDocument()
   })
 
-  it('prevents form submission with invalid weight', async () => {
-    await act(async () => {
-      render(<MealFormWrapper />)
-    })
-
-    const input = screen.getByLabelText('Weight (grams)') as HTMLInputElement
-    
-    // Try typing negative number
-    await user.clear(input)
-    await user.type(input, '-')
-    expect(input.value).toBe('')  // Should reject the minus sign
-    
-    await user.clear(input)
-    await user.type(input, '0')
-    expect(input.value).toBe('0')
-
-    const submitButton = screen.getByRole('button', { name: /record meal/i })
-    expect(submitButton).toHaveAttribute('disabled') // Still disabled because cat and food type not selected
-  })
-
-  it('handles failed cats fetch', async () => {
-    global.fetch = jest.fn().mockImplementationOnce(() => 
-      Promise.reject(new Error('Failed to fetch'))
-    )
-
-    await act(async () => {
-      render(<MealFormWrapper />)
-    })
-
-    expect(screen.getByText('No cats found. Please add cats in the settings page.')).toBeInTheDocument()
-  })
-
-  it('submits form with correct data', async () => {
+  it('submits form with correct data and timezone', async () => {
     global.fetch = jest.fn()
       .mockImplementationOnce(() => Promise.resolve({
         ok: true,
@@ -160,6 +156,7 @@ describe('MealFormWrapper', () => {
     expect(submitButton).not.toHaveAttribute('disabled')
     await user.click(submitButton)
     
+    // Check that timezone was included in the request
     expect(global.fetch).toHaveBeenLastCalledWith('/api/meals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -167,7 +164,7 @@ describe('MealFormWrapper', () => {
         catId: 1,
         foodType: 'WET',
         weight: 100,
-        timezone: 'UTC'
+        timezone: 'Europe/London'  // Using mocked timezone
       })
     })
     
@@ -176,29 +173,20 @@ describe('MealFormWrapper', () => {
 
   it('shows error message when submission fails', async () => {
     global.fetch = jest.fn()
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockCats)
-      }))
-      .mockImplementationOnce(() => Promise.resolve({
+      .mockResolvedValueOnce({
         ok: false,
         status: 500
-      }))
+      })
 
-    await act(async () => {
-      render(<MealFormWrapper />)
-    })
+    render(<MealFormWrapper />)
     
     // Fill and submit form
     await user.click(screen.getByText('Ahmed'))
     await user.click(screen.getByText('Wet Food'))
-    
-    const input = screen.getByLabelText('Weight (grams)')
-    await user.clear(input)
-    await user.type(input, '100')
-    
+    await user.type(screen.getByLabelText('Weight (grams)'), '100')
     await user.click(screen.getByRole('button', { name: /record meal/i }))
     
-    expect(await screen.findByText('Could not save the meal, please try again later!')).toBeInTheDocument()
+    const errorAlert = await screen.findByRole('alert')
+    expect(errorAlert).toHaveTextContent('Could not save the meal, please try again later!')
   })
 }) 

@@ -13,12 +13,13 @@ const updateSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const body = await request.json()
     const validated = updateSchema.parse(body)
-    const mealId = parseInt(await params.id)
+    const mealId = parseInt(params.id)
 
     // DO NOT REMOVE - TZ HANDLING
     const updateData = { ...validated }
@@ -55,16 +56,17 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-): Promise<Response> {
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
+    const params = await context.params
     const mealId = parseInt(params.id)
     await prisma.meal.delete({
       where: { id: mealId }
     })
     
-    return new Response(null, { status: 204 })
+    return NextResponse.json(null, { status: 204 })
   } catch (error) {
     console.error('Failed to delete meal:', error)
     return NextResponse.json({ error: 'Delete failed' }, { status: 500 })

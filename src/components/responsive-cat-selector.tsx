@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { CatButtons } from './cat-buttons'
 import { CatSelect } from './cat-select'
 
-interface ResponsiveCatSelectorProps {
+export interface ResponsiveCatSelectorProps {
   value?: number | null
   onChange: (catId: number | null) => void
   includeAll?: boolean
