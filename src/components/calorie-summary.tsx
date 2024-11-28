@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { useMeals } from "@/contexts/meal-context"
 import { CalorieSummarySkeleton } from './calorie-summary-skeleton'
-import { isSameDay, getUserTimezone } from '@/lib/date-utils'
+import { isSameDay, getUserTimezone, parseDisplayDate } from '@/lib/date-utils'
 import { TZDate } from '@date-fns/tz'
 
 interface CalorieSummaryProps {
@@ -60,26 +60,28 @@ export function CalorieSummary({ selectedCatId, date, hideTitle = false }: Calor
       ? TZDate.tz(timezone, new Date(date.split('/').reverse().join('-')))
       : TZDate.tz(timezone)
 
-    // console.log('CalorieSummary filtering for:', {
-    //   targetDate: targetDate.toISOString(),
-    //   originalDate: date,
-    //   mealsCount: meals.length
-    // })
+    console.log('CalorieSummary filtering for:', {
+      targetDate: targetDate,
+      originalDate: date,
+      mealsCount: meals.length,
+      catId: selectedCatId
+    })
     
     const filtered = meals.filter(meal => {
       const mealDate = TZDate.tz(timezone, new Date(meal.createdAt))
       const isSame = isSameDay(mealDate, targetDate, timezone)
-      // console.log('Comparing dates:', {
-      //   mealDate: mealDate.toISOString(),
-      //   targetDate: targetDate.toISOString(),
-      //   isSame,
-      //   catId: meal.catId,
-      //   selectedCatId
-      // })
+      console.log('Comparing dates:', {
+        mealDate: mealDate,
+        targetDate: targetDate,
+        isSame,
+        catId: meal.catId,
+        selectedCatId,
+        meal
+      })
       return meal.catId === selectedCatId && isSame
     })
     
-    // console.log('Filtered meals:', filtered)
+    console.log('Filtered meals for summary:', filtered)
     setTodaysMeals(filtered)
   }, [meals, selectedCatId, date, timezone])
 

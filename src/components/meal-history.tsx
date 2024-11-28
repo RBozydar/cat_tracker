@@ -21,11 +21,13 @@ import { formatDateTime, getUserTimezone } from '@/lib/date-utils'
 
 export function MealHistory() {
   const { meals, loading } = useMeals()
-  const [filteredMeals, setFilteredMeals] = useState<Meal[]>(meals)
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null)
+  const [filteredMeals, setFilteredMeals] = useState<Meal[]>([])
   const timezone = getUserTimezone()
 
   useEffect(() => {
+    if (!meals) return
+    
     if (selectedCatId) {
       setFilteredMeals(meals.filter(meal => meal.catId === selectedCatId))
     } else {
@@ -51,7 +53,7 @@ export function MealHistory() {
     return <MealHistorySkeleton />
   }
 
-  if (meals.length === 0) {
+  if (!meals || meals.length === 0) {
     return (
       <Card className="p-4">
         <div className="text-center text-muted-foreground">No meals recorded yet.</div>

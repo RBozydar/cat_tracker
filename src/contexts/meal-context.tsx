@@ -1,26 +1,16 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback } from 'react'
-import { logger } from '@/lib/logger'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { Meal } from '@/lib/types'
 import { TZDate, tz } from '@date-fns/tz'
 import { format } from 'date-fns'
 
 interface MealContextType {
-  meals: Meal[]
-  addMeal: (meal: Meal) => void
-  updateMeal: (updatedMeal: Meal) => void
-  deleteMeal: (id: number) => Promise<void>
+  meals: Meal[] | null
   loading: boolean
+  error: Error | null
   fetchMeals: (params: FetchParams) => Promise<void>
-}
-
-const MealContext = createContext<MealContextType | undefined>(undefined)
-
-interface MealProviderProps {
-  children: React.ReactNode
-  initialMeals?: Meal[]
-  loading?: boolean
+  refetch: () => Promise<void>
 }
 
 interface FetchParams {
@@ -30,13 +20,12 @@ interface FetchParams {
   catId?: number
 }
 
-export function MealProvider({ 
-  children, 
-  initialMeals = [], 
-  loading: initialLoading = true 
-}: MealProviderProps) {
-  const [meals, setMeals] = useState<Meal[]>(initialMeals)
-  const [loading, setLoading] = useState(initialLoading)
+const MealContext = createContext<MealContextType | undefined>(undefined)
+
+export function MealProvider({ children }: { children: React.ReactNode }) {
+  const [meals, setMeals] = useState<Meal[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
   const fetchMeals = useCallback(async (params: FetchParams) => {
     try {
@@ -57,59 +46,42 @@ export function MealProvider({
       }
 
       const response = await fetch(`/api/meals?${searchParams}`)
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch meals')
-      }
+      if (!response.ok) throw new Error('Failed to fetch meals')
       
       const data = await response.json()
-      setMeals(Array.isArray(data) ? data : [])
-    } catch (error) {
-      logger.error('Failed to fetch meals:', error)
-      setMeals([])
+      console.log('Fetched meals:', data)
+      setMeals(data)
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching meals:', err)
+      setError(err instanceof Error ? err : new Error('Unknown error'))
     } finally {
       setLoading(false)
     }
   }, [])
 
-  const addMeal = (newMeal: Meal) => {
-    setMeals(prevMeals => [newMeal, ...prevMeals])
-  }
+  // Simple refetch for components that don't need parameters
+  const refetch = useCallback(async () => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const today = new Date()
+    await fetchMeals({
+      startDate: today.toISOString(),
+      timezone
+    })
+  }, [fetchMeals])
 
-  const updateMeal = (updatedMeal: Meal) => {
-    setMeals(prevMeals => 
-      prevMeals.map(meal => 
-        meal.id === updatedMeal.id ? updatedMeal : meal
-      )
-    )
-  }
-
-  const deleteMeal = async (id: number) => {
-    try {
-      const response = await fetch(`/api/meals/${id}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to delete meal')
-      }
-
-      setMeals(prevMeals => prevMeals.filter(meal => meal.id !== id))
-    } catch (error) {
-      logger.error('Failed to delete meal:', error)
-      throw error
-    }
-  }
+  // Initial fetch
+  useEffect(() => {
+    refetch()
+  }, [refetch])
 
   return (
     <MealContext.Provider value={{ 
       meals, 
-      addMeal, 
-      updateMeal,
-      deleteMeal,
       loading,
-      fetchMeals 
+      error,
+      fetchMeals,
+      refetch
     }}>
       {children}
     </MealContext.Provider>
