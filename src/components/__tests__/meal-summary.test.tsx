@@ -3,7 +3,6 @@ import { MealSummary } from '../meal-summary'
 import { MealProvider } from '@/contexts/meal-context'
 import type { Meal } from '@/lib/types'
 import { TZDate } from '@date-fns/tz'
-import { toUserLocaleDateString } from '@/lib/date-utils'
 
 // Mock components
 jest.mock('../calorie-summary', () => ({
