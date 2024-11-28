@@ -24,18 +24,18 @@ export function CalorieSummary({ selectedCatId, date, hideTitle = false }: Calor
   // Fetch cat data
   useEffect(() => {
     setLoading(true)
-    // console.log('CalorieSummary: Fetching cat data for:', selectedCatId)
+    console.log('CalorieSummary: Fetching cat data for:', selectedCatId)
 
     fetch(`/api/cats/${selectedCatId}`)
       .then(async res => {
-        // console.log('CalorieSummary: Cat API response status:', res.status)
+        console.log('CalorieSummary: Cat API response status:', res.status)
         const data = await res.json()
-        // console.log('CalorieSummary: Raw cat data:', data)
+        console.log('CalorieSummary: Raw cat data:', data)
         return data
       })
       .then(catData => {
         if (!catData) throw new Error('Cat not found')
-        // console.log('CalorieSummary: Setting cat data:', catData)
+        console.log('CalorieSummary: Setting cat data:', catData)
         setCat(catData)
         setError(null)
       })
@@ -44,7 +44,7 @@ export function CalorieSummary({ selectedCatId, date, hideTitle = false }: Calor
         setError('Failed to load data')
       })
       .finally(() => {
-        // console.log('CalorieSummary: Finished loading cat data')
+        console.log('CalorieSummary: Finished loading cat data')
         setLoading(false)
       })
   }, [selectedCatId])
