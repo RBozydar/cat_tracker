@@ -40,12 +40,12 @@ export function PortionSettingsForm() {
         body: JSON.stringify({ [key]: value })
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to update portion settings')
+        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }))
+        throw new Error(errorData.error || 'Failed to update portion settings')
       }
 
+      const data = await response.json()
       setSettings(data)
     } catch (error) {
       logger.error('Failed to update portion settings:', error)

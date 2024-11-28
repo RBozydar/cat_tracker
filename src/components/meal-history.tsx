@@ -17,12 +17,13 @@ import { useMeals } from '@/contexts/meal-context'
 import type { Meal } from '@/lib/types'
 import { DeleteMealDialog } from './delete-meal-dialog'
 import { MealHistorySkeleton } from './meal-history-skeleton'
-import { formatDateTime } from '@/lib/date-utils'
+import { formatDateTime, getUserTimezone } from '@/lib/date-utils'
 
 export function MealHistory() {
   const { meals, loading } = useMeals()
   const [filteredMeals, setFilteredMeals] = useState<Meal[]>(meals)
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null)
+  const timezone = getUserTimezone()
 
   useEffect(() => {
     if (selectedCatId) {
@@ -89,7 +90,7 @@ export function MealHistory() {
             {filteredMeals.map((meal) => (
               <TableRow key={meal.id}>
                 <TableCell>
-                  {formatDateTime(meal.createdAt)}
+                  {formatDateTime(meal.createdAt, timezone)}
                 </TableCell>
                 <TableCell>{meal.cat.name}</TableCell>
                 <TableCell>{meal.foodType}</TableCell>

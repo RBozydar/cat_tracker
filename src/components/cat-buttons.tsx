@@ -40,7 +40,7 @@ export function CatButtons({
 
   if (cats.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground">
+      <div data-testid="cat-selector-error" className="text-sm text-muted-foreground">
         No cats found. Please add cats in settings.
       </div>
     )

@@ -1,5 +1,12 @@
 {
-  "extends": ["next/core-web-vitals", "next/typescript", "plugin:react-hooks/recommended", "plugin:@next/next/recommended"],
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript",
+    "plugin:react-hooks/recommended",
+    "plugin:@next/next/recommended",
+    "prettier",
+    "next"
+  ],
   "plugins": ["@next/next"],
   "rules": {
     "react/no-unescaped-entities": "off"

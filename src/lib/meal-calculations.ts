@@ -1,4 +1,6 @@
 import type { Meal } from './types'
+import { startOfDay, endOfDay, format } from 'date-fns'
+import { TZDate, tz } from '@date-fns/tz'
 
 type FoodSettings = {
   foodType: string
@@ -41,6 +43,32 @@ export function calculateMealSummaries(meals: Meal[], settings: FoodSettings[]) 
 
 export function filterMealsByDate(meals: Meal[], date: string) {
   return meals.filter(meal => meal.createdAt.split('T')[0] === date)
+}
+
+export function groupMealsByDate(
+  meals: Array<{ createdAt: string; catId: number }>, 
+  timezone: string
+) {
+  return meals.reduce((acc, meal) => {
+    const tzDate = TZDate.tz(timezone, new Date(meal.createdAt))
+    const dateKey = format(tzDate, 'M/d/yyyy', { in: tz(timezone) })
+    
+    if (!acc.has(dateKey)) {
+      acc.set(dateKey, new Set<number>())
+    }
+    acc.get(dateKey)!.add(meal.catId)
+    return acc
+  }, new Map<string, Set<number>>())
+}
+
+export function createDateRangeQuery(startDate: string, timezone: string, endDate?: string) {
+  const tzStart = TZDate.tz(timezone, new Date(startDate))
+  const tzEnd = endDate ? TZDate.tz(timezone, new Date(endDate)) : tzStart
+  
+  return {
+    gte: format(startOfDay(tzStart), "yyyy-MM-dd'T'HH:mm:ss'Z'", { in: tz(timezone) }),
+    lte: format(endOfDay(tzEnd), "yyyy-MM-dd'T'HH:mm:ss'Z'", { in: tz(timezone) })
+  }
 }
 
 export type { CatSummary, FoodSettings } 

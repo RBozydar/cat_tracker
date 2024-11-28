@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MealProvider, useMeals } from '../meal-context'
 import { useEffect } from 'react'
@@ -7,40 +7,33 @@ import { useEffect } from 'react'
 global.fetch = jest.fn()
 
 // Test component that uses the context
-function TestComponent({ onLoad }: { onLoad?: () => void }) {
-  const { meals, updateMeal, addMeal, loading } = useMeals()
+function TestComponent() {
+  const { meals, loading, fetchMeals, addMeal, updateMeal } = useMeals()
   
   useEffect(() => {
-    if (!loading && onLoad) {
-      onLoad()
-    }
-  }, [loading, onLoad])
+    fetchMeals({
+      startDate: new Date().toISOString(),
+      timezone: 'UTC'
+    })
+  }, [fetchMeals])
+
+  const handleAddMeal = () => {
+    const newMeal = { ...mockMeals[0], id: 2 }
+    addMeal(newMeal)
+  }
+
+  const handleUpdateMeal = () => {
+    const updatedMeal = { ...mockMeals[0], weight: 200 }
+    updateMeal(updatedMeal)
+  }
 
   if (loading) return <div>Loading...</div>
   
   return (
     <div>
       <div data-testid="meal-count">{meals.length}</div>
-      <button 
-        onClick={() => updateMeal({
-          ...meals[0],
-          weight: 200
-        })}
-      >
-        Update Meal
-      </button>
-      <button
-        onClick={() => addMeal({
-          id: 2,
-          catId: 1,
-          cat: mockCats[0],
-          foodType: 'WET',
-          weight: 150,
-          createdAt: new Date().toISOString()
-        })}
-      >
-        Add Meal
-      </button>
+      <button onClick={handleAddMeal}>Add Meal</button>
+      <button onClick={handleUpdateMeal}>Update Meal</button>
     </div>
   )
 }
@@ -84,58 +77,75 @@ describe('MealContext', () => {
   })
 
   it('provides meals data and loading state', async () => {
+    // Mock fetch response
+    global.fetch = jest.fn().mockImplementationOnce(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockMeals)
+      })
+    )
+
     render(
       <MealProvider>
         <TestComponent />
       </MealProvider>
     )
     
-    // Check loading state
+    // Initial loading state
     expect(screen.getByText('Loading...')).toBeInTheDocument()
-    
-    // Wait for loading to complete and check final state
-    await screen.findByTestId('meal-count')
-    expect(screen.getByTestId('meal-count')).toHaveTextContent('1')
+
+    // Wait for data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('meal-count')).toHaveTextContent('1')
+    })
   })
 
   it('updates meals correctly', async () => {
+    global.fetch = jest.fn().mockImplementationOnce(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockMeals)
+      })
+    )
+
     render(
       <MealProvider>
         <TestComponent />
       </MealProvider>
     )
+
+    // Wait for initial data to load
+    await waitFor(() => {
+      expect(screen.getByTestId('meal-count')).toHaveTextContent('1')
+    })
     
-    // Wait for loading to complete
-    const addButton = await screen.findByText('Add Meal')
-    await user.click(addButton)
-    
-    // Check meal count after adding
+    // Add meal
+    await user.click(screen.getByText('Add Meal'))
     expect(screen.getByTestId('meal-count')).toHaveTextContent('2')
     
     // Update meal
-    const updateButton = screen.getByText('Update Meal')
-    await user.click(updateButton)
-    
-    // Check meal count hasn't changed after update
+    await user.click(screen.getByText('Update Meal'))
     expect(screen.getByTestId('meal-count')).toHaveTextContent('2')
   })
 
   it('handles fetch errors gracefully', async () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
-    ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Failed to fetch'))
+    
+    // Mock fetch to reject
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Failed to fetch'))
 
     render(
       <MealProvider>
         <TestComponent />
       </MealProvider>
     )
+
+    // Wait for error state to be handled and meals to be empty
+    await waitFor(() => {
+      expect(screen.getByTestId('meal-count')).toHaveTextContent('0')
+    })
     
-    // Check loading state
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
-    
-    // Wait for error handling to complete
-    await screen.findByTestId('meal-count')
-    
+    // Verify error was logged
     expect(consoleError).toHaveBeenCalled()
     consoleError.mockRestore()
   })

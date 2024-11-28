@@ -115,7 +115,7 @@ function MealForm() {
             value={weight}
             onChange={handleWeightChange}
             step="0.1"
-            min="0"
+            min="1"
             className="w-full"
           />
         </div>
@@ -125,7 +125,7 @@ function MealForm() {
         <Button 
           type="submit" 
           className="w-full"
-          disabled={!selectedCat || !foodType || !weight}
+          disabled={!selectedCat || !foodType || !weight || parseFloat(weight) < 1}
         >
           Record Meal
         </Button>

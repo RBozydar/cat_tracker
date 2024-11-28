@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils"
 import { logger } from '@/lib/logger'
 import { useMeals } from "@/contexts/meal-context"
 import { CalorieSummarySkeleton } from './calorie-summary-skeleton'
-import { toUserLocaleDateString, getTodayInUserTimezone } from '@/lib/date-utils'
+import { toUserLocaleDateString, getUserTimezone } from '@/lib/date-utils'
+import { TZDate } from '@date-fns/tz'
 
 interface MealFormCalorieSummaryProps {
   selectedCatId: number
@@ -45,11 +46,15 @@ export function MealFormCalorieSummary({ selectedCatId }: MealFormCalorieSummary
   }, [selectedCatId])
 
   useEffect(() => {
-    const today = getTodayInUserTimezone()
-    const filtered = meals.filter(meal => 
-      meal.catId === selectedCatId && 
-      toUserLocaleDateString(meal.createdAt) === today
-    )
+    const timezone = getUserTimezone()
+    const today = TZDate.tz(timezone)
+    const todayStr = toUserLocaleDateString(today, timezone)
+    
+    const filtered = meals.filter(meal => {
+      const mealDate = TZDate.tz(timezone, new Date(meal.createdAt))
+      return meal.catId === selectedCatId && 
+             toUserLocaleDateString(mealDate, timezone) === todayStr
+    })
     setTodaysMeals(filtered)
   }, [meals, selectedCatId])
 

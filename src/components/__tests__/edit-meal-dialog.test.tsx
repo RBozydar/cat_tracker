@@ -2,7 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EditMealDialog } from '../edit-meal-dialog'
 import type { Meal } from '@/lib/types'
-
+import { formatDateTime } from '@/lib/date-utils'
+import { logger } from '@/lib/logger'
 const mockUpdateMeal = jest.fn()
 const mockDeleteMeal = jest.fn()
 
@@ -22,121 +23,261 @@ jest.mock('@/lib/logger', () => ({
   }
 }))
 
-describe('EditMealDialog', () => {
-  const mockMeal: Meal = {
-    id: 1,
-    catId: 1,
-    cat: {
-      id: 1,
-      name: 'Ahmed',
-      wetFoodId: 1,
-      dryFoodId: 2,
-      wetFood: { id: 1, name: 'Wet Food', foodType: 'WET', calories: 100 },
-      dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY', calories: 300 },
-      targetCalories: 250,
-      weight: 4.5,
-      weightUnit: 'kg'
-    },
-    foodType: 'WET',
-    weight: 100,
-    createdAt: new Date().toISOString()
+// Mock fetch responses
+const mockCats = [
+  { 
+    id: 1, 
+    name: 'Ahmed',
+    wetFoodId: 1,
+    dryFoodId: 2,
+    wetFood: { id: 1, name: 'Wet Food', foodType: 'WET', calories: 100 },
+    dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY', calories: 300 },
+    targetCalories: 250,
+    weight: 4.5,
+    weightUnit: 'kg'
   }
+]
+
+const mockMeal: Meal = {
+  id: 1,
+  catId: 1,
+  foodType: 'WET',
+  weight: 100,
+  createdAt: new Date().toISOString(),
+  cat: {
+    id: 1,
+    name: 'Ahmed',
+    wetFoodId: 1,
+    dryFoodId: 2,
+    wetFood: { id: 1, name: 'Wet Food', foodType: 'WET', calories: 100 },
+    dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY', calories: 300 },
+    targetCalories: 250,
+    weight: 4.5,
+    weightUnit: 'kg'
+  }
+}
+
+// Mock timezone
+const mockTimezone = 'UTC'
+jest.mock('@/lib/date-utils', () => ({
+  ...jest.requireActual('@/lib/date-utils'),
+  getUserTimezone: () => mockTimezone,
+  formatDateTime: jest.fn()
+}))
+
+describe('EditMealDialog', () => {
+  const user = userEvent.setup({ delay: null })
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(global.fetch as jest.Mock).mockClear()
+    
+    // Mock fetch to return cats data for CatSelect component
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url.includes('/api/cats')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCats)
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({})
+      })
+    })
+    
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2024-11-27T12:00:00Z'))
   })
 
-  it('renders edit button initially', () => {
-    render(<EditMealDialog meal={mockMeal} />)
-    expect(screen.getByRole('button')).toBeInTheDocument()
+  afterEach(() => {
+    jest.runOnlyPendingTimers()
+    jest.useRealTimers()
   })
 
-  it('opens dialog when edit button is clicked', async () => {
+  it('disables submit button when form is incomplete', async () => {
     render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
+    
+    // Open dialog and wait for it to be ready
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    
+    // Wait for cats data to load and form to be ready
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    // Verify initial state
+    const submitButton = screen.getByRole('button', { name: /save changes/i })
+    expect(submitButton).toBeEnabled() // Should be enabled initially
+    
+    // Clear weight input
+    const weightInput = screen.getByLabelText(/weight/i)
+    await user.clear(weightInput)
+    await user.type(weightInput, '0')
+    
+    // Verify button is disabled
+    await waitFor(() => {
+      expect(submitButton).toBeDisabled()
+    })
+  })
+
+  it('shows loading state while submitting', async () => {
+    // Mock fetch to be slow to show loading state
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url.includes('/api/cats')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCats)
+        })
+      }
+      // Make the meal update slow
+      return new Promise(resolve => 
+        setTimeout(() => 
+          resolve({ 
+            ok: true, 
+            json: () => Promise.resolve(mockMeal) 
+          }), 
+        100)
+      )
+    })
+
+    render(<EditMealDialog meal={mockMeal} />)
+    
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    
+    // Wait for dialog to be ready
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+    
+    // Click save and check for loading state
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
+    
+    // Check for loading state
+    expect(saveButton).toHaveTextContent(/saving/i)
+  })
+
+  it('updates meal with new values when submitted', async () => {
+    render(<EditMealDialog meal={mockMeal} />)
+    
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    
+    // Change food type
+    await user.click(screen.getByRole('button', { name: 'DRY' }))
+    
+    // Change weight
+    const weightInput = screen.getByLabelText(/weight/i)
+    await user.clear(weightInput)
+    await user.type(weightInput, '150')
+    
+    // Submit form
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    
+    expect(global.fetch).toHaveBeenCalledWith(`/api/meals/${mockMeal.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: expect.stringContaining('"foodType":"DRY","weight":150')
+    })
+    
+    expect(mockUpdateMeal).toHaveBeenCalled()
+  })
+
+  it('handles submission errors gracefully', async () => {
+    const mockLoggerError = jest.fn()
+    jest.spyOn(logger, 'error').mockImplementation(mockLoggerError)
+    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Failed to update'))
+
+    render(<EditMealDialog meal={mockMeal} />)
+    
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    
+    expect(mockLoggerError).toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
-  it('displays current meal data in form', async () => {
-    render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
-    
-    expect(screen.getByDisplayValue('100')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'WET' })).toHaveClass('bg-primary')
-  })
-
-  it('updates food type when clicking food type buttons', async () => {
-    render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
-    
-    await userEvent.click(screen.getByRole('button', { name: 'DRY' }))
-    expect(screen.getByRole('button', { name: 'DRY' })).toHaveClass('bg-primary')
-  })
-
-  it('handles weight input changes', async () => {
-    render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
-    
-    const weightInput = screen.getByLabelText('Weight (g)')
-    await userEvent.clear(weightInput)
-    await userEvent.type(weightInput, '150')
-    expect(weightInput).toHaveValue(150)
-  })
-
-  it('disables submit button for invalid weight', async () => {
-    render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
-    
-    const weightInput = screen.getByLabelText('Weight (g)')
-    await userEvent.clear(weightInput)
-    await userEvent.type(weightInput, '0')
-    
-    expect(screen.getByRole('button', { name: 'Save Changes' })).toBeDisabled()
-  })
-
-  it('successfully updates meal', async () => {
-    const updatedMeal = { ...mockMeal, weight: 150 }
-    ;(global.fetch as jest.Mock).mockImplementationOnce(() => 
-      Promise.resolve({
+  it('updates date when calendar is used', async () => {
+    // Mock fetch responses
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url.includes('/api/cats')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCats)
+        })
+      }
+      return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(updatedMeal)
+        json: () => Promise.resolve({})
       })
-    )
+    })
+
+    // Set up initial date
+    jest.setSystemTime(new Date('2024-11-27T12:00:00Z'))
+    const mockFormattedDate = 'Nov 27, 2024, 12:00 PM'
+    ;(formatDateTime as jest.Mock).mockReturnValue(mockFormattedDate)
 
     render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
     
-    const weightInput = screen.getByLabelText('Weight (g)')
-    await userEvent.clear(weightInput)
-    await userEvent.type(weightInput, '150')
+    // Open dialog
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
     
-    await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
-
+    // Wait for dialog
     await waitFor(() => {
-      expect(mockUpdateMeal).toHaveBeenCalledWith(updatedMeal)
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
+    
+    // Find and click the date picker button
+    const datePickerButton = screen.getByRole('button', { name: mockFormattedDate })
+    await user.click(datePickerButton)
+    
+    // Find and click tomorrow's date using the date number
+    const tomorrowButton = screen.getByRole('button', {
+      name: /thursday, november 28th, 2024/i
+    })
+    await user.click(tomorrowButton)
+    
+    // Submit form immediately after selecting date
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    
+    // Verify the API call includes the new date
+    await waitFor(() => {
+      const lastCall = (global.fetch as jest.Mock).mock.calls.slice(-1)[0]
+      expect(lastCall[0]).toBe(`/api/meals/${mockMeal.id}`)
+      expect(lastCall[1].method).toBe('PATCH')
+      
+      const requestBody = JSON.parse(lastCall[1].body)
+      expect(requestBody.createdAt).toContain('2024-11-28')
+    }, { timeout: 3000 })
   })
 
-  it('handles API error gracefully', async () => {
-    ;(global.fetch as jest.Mock).mockImplementationOnce(() => 
-      Promise.resolve({ ok: false })
-    )
-
+  it('closes dialog when cancel is clicked', async () => {
     render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
-    await userEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
-
-    await waitFor(() => {
-      expect(mockUpdateMeal).not.toHaveBeenCalled()
-    })
-  })
-
-  it('closes dialog when clicking cancel', async () => {
-    render(<EditMealDialog meal={mockMeal} />)
-    await userEvent.click(screen.getByRole('button'))
     
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('preserves initial values when reopening dialog', async () => {
+    render(<EditMealDialog meal={mockMeal} />)
+    
+    // Open dialog, make changes, then cancel
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    
+    const weightInput = screen.getByLabelText(/weight/i)
+    await user.clear(weightInput)
+    await user.type(weightInput, '999')
+    
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    
+    // Reopen dialog and check values
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    
+    // Wait for form to reset and verify initial value
+    await waitFor(() => {
+      const newWeightInput = screen.getByLabelText(/weight/i)
+      expect(newWeightInput).toHaveValue(mockMeal.weight)
+    })
   })
 }) 

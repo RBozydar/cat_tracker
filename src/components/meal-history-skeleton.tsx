@@ -11,7 +11,7 @@ import {
 
 export function MealHistorySkeleton() {
   return (
-    <div className="space-y-4">
+    <div data-testid="meal-history-skeleton" className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-10 w-full sm:w-[200px]" />

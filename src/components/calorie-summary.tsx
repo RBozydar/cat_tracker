@@ -2,10 +2,10 @@ import { Card } from "@/components/ui/card"
 import type { Cat, Meal } from "@/lib/types"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
-import { logger } from '@/lib/logger'
 import { useMeals } from "@/contexts/meal-context"
 import { CalorieSummarySkeleton } from './calorie-summary-skeleton'
-import { isSameDay } from '@/lib/date-utils'
+import { isSameDay, getUserTimezone } from '@/lib/date-utils'
+import { TZDate } from '@date-fns/tz'
 
 interface CalorieSummaryProps {
   selectedCatId: number
@@ -14,40 +14,74 @@ interface CalorieSummaryProps {
 }
 
 export function CalorieSummary({ selectedCatId, date, hideTitle = false }: CalorieSummaryProps) {
-  const { meals } = useMeals()
+  const { meals = [] } = useMeals()
   const [cat, setCat] = useState<Cat | null>(null)
   const [todaysMeals, setTodaysMeals] = useState<Meal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const timezone = getUserTimezone()
 
   // Fetch cat data
   useEffect(() => {
     setLoading(true)
+    // console.log('CalorieSummary: Fetching cat data for:', selectedCatId)
 
     fetch(`/api/cats/${selectedCatId}`)
-      .then(res => res.json())
+      .then(async res => {
+        // console.log('CalorieSummary: Cat API response status:', res.status)
+        const data = await res.json()
+        // console.log('CalorieSummary: Raw cat data:', data)
+        return data
+      })
       .then(catData => {
         if (!catData) throw new Error('Cat not found')
+        // console.log('CalorieSummary: Setting cat data:', catData)
         setCat(catData)
         setError(null)
       })
       .catch(error => {
-        logger.error('Failed to fetch cat:', error)
+        console.error('CalorieSummary: Failed to fetch cat:', error)
         setError('Failed to load data')
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        // console.log('CalorieSummary: Finished loading cat data')
+        setLoading(false)
+      })
   }, [selectedCatId])
 
   // Filter meals for the selected date
   useEffect(() => {
-    // DO NOT REMOVE - TZ HANDLING
-    const targetDate = date ? new Date(date) : new Date()
-    const filtered = meals.filter(meal => 
-      meal.catId === selectedCatId && 
-      isSameDay(new Date(meal.createdAt), targetDate)
-    )
+    if (!Array.isArray(meals)) {
+      setTodaysMeals([])
+      return
+    }
+
+    const targetDate = date 
+      ? TZDate.tz(timezone, new Date(date.split('/').reverse().join('-')))
+      : TZDate.tz(timezone)
+
+    // console.log('CalorieSummary filtering for:', {
+    //   targetDate: targetDate.toISOString(),
+    //   originalDate: date,
+    //   mealsCount: meals.length
+    // })
+    
+    const filtered = meals.filter(meal => {
+      const mealDate = TZDate.tz(timezone, new Date(meal.createdAt))
+      const isSame = isSameDay(mealDate, targetDate, timezone)
+      // console.log('Comparing dates:', {
+      //   mealDate: mealDate.toISOString(),
+      //   targetDate: targetDate.toISOString(),
+      //   isSame,
+      //   catId: meal.catId,
+      //   selectedCatId
+      // })
+      return meal.catId === selectedCatId && isSame
+    })
+    
+    // console.log('Filtered meals:', filtered)
     setTodaysMeals(filtered)
-  }, [meals, selectedCatId, date])
+  }, [meals, selectedCatId, date, timezone])
 
   if (loading) return <CalorieSummarySkeleton />
   if (error || !cat) return null

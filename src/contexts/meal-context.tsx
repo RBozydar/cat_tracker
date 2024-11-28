@@ -1,8 +1,10 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback } from 'react'
 import { logger } from '@/lib/logger'
 import type { Meal } from '@/lib/types'
+import { TZDate, tz } from '@date-fns/tz'
+import { format } from 'date-fns'
 
 interface MealContextType {
   meals: Meal[]
@@ -10,29 +12,64 @@ interface MealContextType {
   updateMeal: (updatedMeal: Meal) => void
   deleteMeal: (id: number) => Promise<void>
   loading: boolean
-  refetchMeals: () => Promise<void>
+  fetchMeals: (params: FetchParams) => Promise<void>
 }
 
 const MealContext = createContext<MealContextType | undefined>(undefined)
 
-export function MealProvider({ children }: { children: React.ReactNode }) {
-  const [meals, setMeals] = useState<Meal[]>([])
-  const [loading, setLoading] = useState(true)
+interface MealProviderProps {
+  children: React.ReactNode
+  initialMeals?: Meal[]
+  loading?: boolean
+}
 
-  const fetchMeals = async () => {
+interface FetchParams {
+  startDate: string
+  endDate?: string
+  timezone: string
+  catId?: number
+}
+
+export function MealProvider({ 
+  children, 
+  initialMeals = [], 
+  loading: initialLoading = true 
+}: MealProviderProps) {
+  const [meals, setMeals] = useState<Meal[]>(initialMeals)
+  const [loading, setLoading] = useState(initialLoading)
+
+  const fetchMeals = useCallback(async (params: FetchParams) => {
     try {
-      const response = await fetch('/api/meals')
+      setLoading(true)
+      const tzStart = TZDate.tz(params.timezone, new Date(params.startDate))
+      const tzEnd = params.endDate ? TZDate.tz(params.timezone, new Date(params.endDate)) : undefined
+
+      const searchParams = new URLSearchParams({
+        startDate: format(tzStart, "yyyy-MM-dd'T'HH:mm:ss'Z'", { in: tz(params.timezone) }),
+        timezone: params.timezone
+      })
+      
+      if (tzEnd) {
+        searchParams.append('endDate', format(tzEnd, "yyyy-MM-dd'T'HH:mm:ss'Z'", { in: tz(params.timezone) }))
+      }
+      if (params.catId) {
+        searchParams.append('catId', params.catId.toString())
+      }
+
+      const response = await fetch(`/api/meals?${searchParams}`)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to fetch meals')
+      }
+      
       const data = await response.json()
-      setMeals(data)
+      setMeals(Array.isArray(data) ? data : [])
     } catch (error) {
       logger.error('Failed to fetch meals:', error)
+      setMeals([])
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchMeals()
   }, [])
 
   const addMeal = (newMeal: Meal) => {
@@ -53,18 +90,16 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
         method: 'DELETE'
       })
 
-      if (!response.ok) throw new Error('Failed to delete meal')
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete meal')
+      }
 
       setMeals(prevMeals => prevMeals.filter(meal => meal.id !== id))
     } catch (error) {
       logger.error('Failed to delete meal:', error)
       throw error
     }
-  }
-
-  const refetchMeals = async () => {
-    setLoading(true)
-    await fetchMeals()
   }
 
   return (
@@ -74,7 +109,7 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
       updateMeal,
       deleteMeal,
       loading,
-      refetchMeals 
+      fetchMeals 
     }}>
       {children}
     </MealContext.Provider>

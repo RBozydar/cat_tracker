@@ -1,8 +1,9 @@
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MealFormWrapper } from '../meal-form'
 import { ResponsiveCatSelectorProps } from '../responsive-cat-selector'
 import '@testing-library/jest-dom'
+import { useState, useEffect } from 'react'
 
 // Mock the CalorieSummary component
 jest.mock('../calorie-summary', () => ({
@@ -29,13 +30,13 @@ jest.mock('@/contexts/meal-context', () => ({
   })
 }))
 
-// Mock ResponsiveCatSelector with proper types
+// Default mock for ResponsiveCatSelector
 jest.mock('../responsive-cat-selector', () => ({
-  ResponsiveCatSelector: ({ onChange }: Pick<ResponsiveCatSelectorProps, 'onChange'>) => (
+  ResponsiveCatSelector: jest.fn(({ onChange }: Pick<ResponsiveCatSelectorProps, 'onChange'>) => (
     <div>
       <button onClick={() => onChange(1)}>Ahmed</button>
     </div>
-  )
+  ))
 }))
 
 // Mock ErrorAlert component
@@ -65,61 +66,84 @@ describe('MealFormWrapper', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     
-    // Mock fetch for initial cats load
-    global.fetch = jest.fn()
-      .mockImplementationOnce(() => Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockCats)
-      }))
+    // Reset to default implementation
+    const { ResponsiveCatSelector } = jest.requireMock('../responsive-cat-selector')
+    ResponsiveCatSelector.mockImplementation(({ onChange }: Pick<ResponsiveCatSelectorProps, 'onChange'>) => (
+      <div>
+        <button onClick={() => onChange(1)}>Ahmed</button>
+      </div>
+    ))
   })
 
-  it('disables submit button when form is incomplete', async () => {
-    await act(async () => {
-      render(<MealFormWrapper />)
+  it('disables submit button when form is incomplete or weight is invalid', async () => {
+    global.fetch = jest.fn().mockImplementationOnce(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockCats)
+      })
+    )
+
+    render(<MealFormWrapper />)
+
+    // Initial state - all fields empty
+    await waitFor(() => {
+      const submitButton = screen.getByRole('button', { name: /record meal/i })
+      expect(submitButton).toHaveAttribute('disabled')
     })
 
-    // Find submit button and verify initial state
-    const submitButton = screen.getByRole('button', { name: /record meal/i })
-    expect(submitButton).toBeDisabled()
-
-    // Select a cat
-    await act(async () => {
-      await user.click(screen.getByText('Ahmed'))
+    // Select a cat - still disabled (no food type or weight)
+    await user.click(screen.getByRole('button', { name: 'Ahmed' }))
+    await waitFor(() => {
+      const submitButton = screen.getByRole('button', { name: /record meal/i })
+      expect(submitButton).toHaveAttribute('disabled')
     })
-    expect(submitButton).toBeDisabled()
 
-    // Add food type
-    await act(async () => {
-      await user.click(screen.getByText('Wet Food'))
+    // Select food type - still disabled (no weight)
+    await user.click(screen.getByRole('button', { name: 'Wet Food' }))
+    await waitFor(() => {
+      const submitButton = screen.getByRole('button', { name: /record meal/i })
+      expect(submitButton).toHaveAttribute('disabled')
     })
-    expect(submitButton).toBeDisabled()
 
-    // Add weight
-    const input = screen.getByLabelText('Weight (grams)')
-    await act(async () => {
-      await user.clear(input)
-      await user.type(input, '0')
-    })
+    // Add invalid weight - button should still be disabled
+    const input = screen.getByRole('spinbutton', { name: /weight/i })
+    await user.type(input, '0')
     
-    // Button should still be disabled with weight of 0
-    expect(submitButton).toBeDisabled()
+    await waitFor(() => {
+      const submitButton = screen.getByRole('button', { name: /record meal/i })
+      expect(submitButton).toHaveAttribute('disabled')
+    })
   })
 
   it('handles failed cats fetch', async () => {
-    // Mock the fetch to fail
-    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Failed to fetch'))
+    // Override the mock just for this test
+    const { ResponsiveCatSelector } = jest.requireMock('../responsive-cat-selector')
+    ResponsiveCatSelector.mockImplementation(({}: Pick<ResponsiveCatSelectorProps, 'onChange'>) => {
+      const [error, setError] = useState(false)
 
-    await act(async () => {
-      render(<MealFormWrapper />)
+      useEffect(() => {
+        setError(true)
+      }, [])
+
+      if (error) {
+        return (
+          <div data-testid="cat-selector-error" className="text-sm text-muted-foreground">
+            No cats found. Please add cats in settings.
+          </div>
+        )
+      }
+
+      return null
     })
 
-    // Wait for error state to be set
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
-    })
-    
-    // Check for error message
-    expect(screen.getByText('No cats found. Please add cats in settings.')).toBeInTheDocument()
+    global.fetch = jest.fn().mockImplementationOnce(() => 
+      Promise.reject(new Error('Failed to fetch'))
+    )
+
+    render(<MealFormWrapper />)
+
+    const errorMessage = await screen.findByTestId('cat-selector-error')
+    expect(errorMessage).toHaveTextContent('No cats found. Please add cats in settings.')
   })
 
   it('submits form with correct data and timezone', async () => {

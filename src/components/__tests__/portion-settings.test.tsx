@@ -78,7 +78,11 @@ describe('PortionSettingsForm', () => {
     })
 
     const toggle = screen.getByRole('switch')
-    await user.click(toggle)
+    await act(async () => {
+      await user.click(toggle)
+      // Wait for all promises to resolve
+      await Promise.resolve()
+    })
 
     expect(global.fetch).toHaveBeenCalledWith('/api/portion-settings', {
       method: 'PATCH',
@@ -87,39 +91,29 @@ describe('PortionSettingsForm', () => {
     })
   })
 
-  it('handles errors gracefully', async () => {
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
-    
+  it('validates meals per day input', async () => {
+    // Initial load
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        suggestPortionSizes: true,
+        mealsPerDay: 2
+      }), { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    )
+
+    // Mock responses for each update attempt
     ;(global.fetch as jest.Mock)
       .mockResolvedValueOnce(
         new Response(JSON.stringify({
-          suggestPortionSizes: false,
+          suggestPortionSizes: true,
           mealsPerDay: 2
         }), { 
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         })
       )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: 'Failed to update' }), { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        })
-      )
-
-    await act(async () => {
-      render(<PortionSettingsForm />)
-    })
-
-    const toggle = screen.getByRole('switch')
-    await user.click(toggle)
-
-    expect(consoleError).toHaveBeenCalled()
-    consoleError.mockRestore()
-  })
-
-  it('validates meals per day input', async () => {
-    ;(global.fetch as jest.Mock)
       .mockResolvedValueOnce(
         new Response(JSON.stringify({
           suggestPortionSizes: true,
@@ -135,12 +129,96 @@ describe('PortionSettingsForm', () => {
     })
 
     const input = screen.getByLabelText('Meals per Day:') as HTMLInputElement
-    await user.clear(input)
-    await user.type(input, '11')
+
+    // Type invalid value (11)
+    await act(async () => {
+      await user.clear(input)
+      await user.type(input, '11')
+      // Wait for fetch to complete
+      await Promise.resolve()
+    })
 
     expect(input.value).toBe('2') // Should not allow values > 10
-    await user.clear(input)
-    await user.type(input, '0')
+
+    // Type invalid value (0)
+    await act(async () => {
+      await user.clear(input)
+      await user.type(input, '0')
+      // Wait for fetch to complete
+      await Promise.resolve()
+    })
+
     expect(input.value).toBe('2') // Should not allow values < 1
+  })
+
+  it('handles errors gracefully', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    
+    // Initial load
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        suggestPortionSizes: false,
+        mealsPerDay: 2
+      }), { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    )
+
+    // Error response for update
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'Failed to update' }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    )
+
+    await act(async () => {
+      render(<PortionSettingsForm />)
+    })
+
+    const toggle = screen.getByRole('switch')
+    await act(async () => {
+      await user.click(toggle)
+      // Wait for fetch to complete
+      await Promise.resolve()
+    })
+
+    expect(consoleError).toHaveBeenCalled()
+    expect(toggle).not.toBeChecked() // Should revert to original state
+    consoleError.mockRestore()
+  })
+
+  it('handles network errors gracefully', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    
+    // Initial load
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        suggestPortionSizes: false,
+        mealsPerDay: 2
+      }), { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    )
+
+    // Network error for update
+    ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+
+    await act(async () => {
+      render(<PortionSettingsForm />)
+    })
+
+    const toggle = screen.getByRole('switch')
+    await act(async () => {
+      await user.click(toggle)
+      // Wait for fetch to complete
+      await Promise.resolve()
+    })
+
+    expect(consoleError).toHaveBeenCalled()
+    expect(toggle).not.toBeChecked() // Should revert to original state
+    consoleError.mockRestore()
   })
 }) 

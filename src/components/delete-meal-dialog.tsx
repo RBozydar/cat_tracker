@@ -36,6 +36,8 @@ export function DeleteMealDialog({
     try {
       await deleteMeal(mealId)
       setOpen(false)
+    } catch (error) {
+      console.error(error)
     } finally {
       setLoading(false)
     }
