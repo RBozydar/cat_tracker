@@ -24,16 +24,26 @@ export function CatButtons({
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/cats')
-      .then(res => res.json())
-      .then(data => {
-        setCats(data)
-        setLoading(false)
-      })
-      .catch(error => {
+    let mounted = true
+    
+    const fetchCats = async () => {
+      try {
+        const res = await fetch('/api/cats')
+        const data = await res.json()
+        if (mounted) {
+          setCats(data)
+          setLoading(false)
+        }
+      } catch (error) {
         logger.error('Failed to fetch cats:', error)
-        setLoading(false)
-      })
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchCats()
+    return () => { mounted = false }
   }, [])
 
   if (loading) return null

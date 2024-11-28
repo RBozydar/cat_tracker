@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MealHistory } from '../meal-history'
 import type { Meal } from '@/lib/types'
@@ -138,15 +138,20 @@ describe('MealHistory', () => {
   it('filters meals by cat', async () => {
     render(<MealHistory />)
     
-    // Wait for cats to load and select to appear
-    const select = await screen.findByRole('button', { name: /select a cat/i })
-    await userEvent.click(select)
-    await userEvent.click(screen.getByText('Ahmed'))
+    // Wait for cats to load and click "Ahmed" button
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Ahmed' })).toBeInTheDocument()
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Ahmed' }))
     
     const rows = screen.getAllByRole('row')
     expect(rows).toHaveLength(2) // header + 1 filtered meal
-    expect(screen.getByText('Ahmed')).toBeInTheDocument()
-    expect(screen.queryByText('Luna')).not.toBeInTheDocument()
+    
+    // Check table cell content
+    const tableCells = screen.getAllByRole('cell')
+    const catCell = tableCells.find(cell => cell.textContent === 'Ahmed')
+    expect(catCell).toBeInTheDocument()
+    expect(screen.queryByRole('cell', { name: 'Luna' })).not.toBeInTheDocument()
   })
 
   it('shows all meals when "All" is selected', async () => {
@@ -171,7 +176,7 @@ describe('MealHistory', () => {
       ...mockMeals[0],
       cat: {
         ...mockMeals[0].cat,
-        wetFood: { ...mockMeals[0].cat.wetFood, calories: 10 }
+        wetFood: { ...mockMeals[0].cat.wetFood, calories: undefined }
       }
     }
     mockUseMeals.meals = [mealWithoutCalories]
@@ -182,14 +187,24 @@ describe('MealHistory', () => {
     mockUseMeals.meals = mockMeals
   })
 
-  it('displays formatted dates correctly', () => {
+  it('displays formatted dates correctly', async () => {
     render(<MealHistory />)
-    // This will depend on the user's locale, so we check for presence of date parts
-    expect(screen.getByText(/2024/)).toBeInTheDocument()
+    
+    // Wait for content to load
+    await waitFor(() => {
+      expect(screen.getByText('Jan 1, 2024, 1:00 PM')).toBeInTheDocument()
+      expect(screen.getByText('Jan 2, 2024, 1:00 PM')).toBeInTheDocument()
+    })
+    
+    // Verify both dates are present
+    const dateElements = screen.getAllByText(/2024/)
+    expect(dateElements).toHaveLength(2)
   })
 
-  it('renders action buttons for each meal', () => {
+  it('renders action buttons for each meal', async () => {
     render(<MealHistory />)
+    // Wait for content to load
+    await screen.findByText('Jan 1, 2024, 1:00 PM')
     const rows = screen.getAllByRole('row').slice(1) // Skip header row
     rows.forEach(row => {
       expect(row.querySelector('button')).toBeInTheDocument()
