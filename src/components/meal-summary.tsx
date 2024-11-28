@@ -6,6 +6,7 @@ import { CalorieSummary } from './calorie-summary'
 import { getLastNDaysRange, toUserLocaleDateString, getUserTimezone } from '@/lib/date-utils'
 import { useState, useEffect } from 'react'
 import { TZDate } from '@date-fns/tz'
+import { parseISO } from 'date-fns'
 
 interface MealSummaryProps {
   days?: number
@@ -44,24 +45,14 @@ export function MealSummary({ days = 1, SkeletonComponent }: MealSummaryProps) {
     // Group meals by date and cat
     const grouped = meals.reduce((acc, meal) => {
       const mealDate = TZDate.tz(timezone, new Date(meal.createdAt))
-      const localDate = toUserLocaleDateString(mealDate, timezone)
+      const dateKey = mealDate.toISOString().split('T')[0]
       
-      console.log('Processing meal:', {
-        date: meal.createdAt,
-        mealDate,
-        localDate,
-        catId: meal.catId,
-        meal
-      })
-      
-      if (!acc.has(localDate)) {
-        acc.set(localDate, new Set())
+      if (!acc.has(dateKey)) {
+        acc.set(dateKey, new Set())
       }
-      acc.get(localDate)!.add(meal.catId)
+      acc.get(dateKey)!.add(meal.catId)
       return acc
     }, new Map<string, Set<number>>())
-    
-    console.log('Grouped meals:', Object.fromEntries(grouped))
     
     setMealsByDateAndCat(grouped)
   }, [meals, timezone])
@@ -86,10 +77,8 @@ export function MealSummary({ days = 1, SkeletonComponent }: MealSummaryProps) {
   const sortedDates = Array.from(mealsByDateAndCat.entries())
     .sort((a, b) => b[0].localeCompare(a[0]))
     .filter(([date]) => {
-      const [month, day, year] = date.split('/')
-      const dateObj = TZDate.tz(timezone, new Date(`${year}-${month}-${day}`))
+      const dateObj = TZDate.tz(timezone, parseISO(date))
       const { start } = getLastNDaysRange(days, timezone)
-      console.log('Filtering date:', { date, dateObj, start, days, result: dateObj >= start })
       return dateObj >= start
     })
 
@@ -102,7 +91,7 @@ export function MealSummary({ days = 1, SkeletonComponent }: MealSummaryProps) {
         console.log('Rendering date:', date, 'catIds:', Array.from(catIds))
         return (
           <Card key={date} className={days > 1 ? "p-4" : ""}>
-            {days > 1 && <h3 className="font-medium mb-3">{date}</h3>}
+            {days > 1 && <h3 className="font-medium mb-3">{toUserLocaleDateString(date, timezone)}</h3>}
             <div className={`space-y-4 ${days > 1 ? "pl-4" : ""}`}>
               {Array.from(catIds).map((catId) => {
                 console.log('Rendering CalorieSummary:', { catId, date })

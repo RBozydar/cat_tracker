@@ -109,13 +109,12 @@ describe('MealSummary', () => {
   ]
 
   it('renders daily summary correctly', async () => {
-    const todayStr = toUserLocaleDateString(today, mockTimezone)
+    const todayISODate = today.toISOString().split('T')[0]
     console.log('Initial date check:', {
       today,
-      todayStr,
+      todayISODate,
       mockMeal: mockMeals[0],
       mealDate: new Date(mockMeals[0].createdAt),
-      formattedDate: toUserLocaleDateString(new Date(mockMeals[0].createdAt), mockTimezone)
     })
 
     // Create a response that matches the API format
@@ -137,7 +136,6 @@ describe('MealSummary', () => {
       expect(screen.getByTestId('mock-skeleton')).toBeInTheDocument()
     })
 
-    // Wait for loading to finish
     await waitFor(() => {
       expect(screen.queryByTestId('mock-skeleton')).not.toBeInTheDocument()
     })
@@ -146,14 +144,13 @@ describe('MealSummary', () => {
     await waitFor(() => {
       const html = document.body.innerHTML
       console.log('Current HTML:', html)
-      const element = screen.getByTestId(`calorie-summary-1-${todayStr}`)
+      const element = screen.getByTestId(`calorie-summary-1-${todayISODate}`)
       console.log('Found element:', element)
       expect(element).toBeInTheDocument()
     }, { timeout: 2000 })
   })
 
   it('renders weekly summary correctly', async () => {
-    // Create a response that matches the API format
     const mockResponse = {
       ok: true,
       json: () => Promise.resolve([
@@ -176,23 +173,21 @@ describe('MealSummary', () => {
       </MealProvider>
     )
 
-    // Verify initial loading state
     expect(screen.getByTestId('mock-skeleton')).toBeInTheDocument()
 
-    const todayStr = toUserLocaleDateString(today, mockTimezone)
-    const yesterdayStr = toUserLocaleDateString(yesterday, mockTimezone)
+    const todayISODate = today.toISOString().split('T')[0]
+    const yesterdayISODate = yesterday.toISOString().split('T')[0]
 
-    // Wait for all content to appear
     await waitFor(() => {
       const html = document.body.innerHTML
       console.log('Current HTML:', html)
       console.log('Looking for:', {
-        today: `calorie-summary-1-${todayStr}`,
-        yesterday: `calorie-summary-2-${yesterdayStr}`
+        today: `calorie-summary-1-${todayISODate}`,
+        yesterday: `calorie-summary-2-${yesterdayISODate}`
       })
       expect(screen.getByText('Last 7 Days Summary')).toBeInTheDocument()
-      expect(screen.getByTestId(`calorie-summary-1-${todayStr}`)).toBeInTheDocument()
-      expect(screen.getByTestId(`calorie-summary-2-${yesterdayStr}`)).toBeInTheDocument()
+      expect(screen.getByTestId(`calorie-summary-1-${todayISODate}`)).toBeInTheDocument()
+      expect(screen.getByTestId(`calorie-summary-2-${yesterdayISODate}`)).toBeInTheDocument()
     }, { timeout: 1000 })
   })
 
