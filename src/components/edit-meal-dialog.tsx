@@ -37,7 +37,12 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const timezone = getUserTimezone()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    catId: number;
+    foodType: 'WET' | 'DRY';
+    weight: string;
+    date: TZDate;
+  }>({
     catId: meal.catId,
     foodType: meal.foodType,
     weight: meal.weight.toString(),
@@ -81,11 +86,11 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
       timezone
     }
     
-    console.log('Submitting meal update:', {
-      mealId: meal.id,
-      payload,
-      rawFormData: formData
-    })
+    // console.log('Submitting meal update:', {
+    //   mealId: meal.id,
+    //   payload,
+    //   rawFormData: formData
+    // })
 
     try {
       const response = await fetch(`/api/meals/${meal.id}`, {
@@ -93,7 +98,7 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      console.log('Response:', 'seems ok')
+      // console.log('Response:', 'seems ok')
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -148,7 +153,7 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
                     key={type}
                     type="button"
                     variant={formData.foodType === type ? 'default' : 'outline'}
-                    onClick={() => setFormData(prev => ({ ...prev, foodType: type }))}
+                    onClick={() => setFormData(prev => ({ ...prev, foodType: type as 'WET' | 'DRY' }))}
                   >
                     {type}
                   </Button>

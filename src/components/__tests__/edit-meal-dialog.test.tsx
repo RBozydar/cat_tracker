@@ -65,6 +65,25 @@ jest.mock('@/lib/date-utils', () => ({
   formatDateTime: jest.fn()
 }))
 
+// Mock console.error to suppress act() warnings
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args: unknown[]) => {
+    if (
+      typeof args[0] === 'string' && 
+      (args[0].includes('Warning: An update to') || 
+       args[0].includes('Warning: The current testing environment'))
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+});
+
+afterAll(() => {
+  console.error = originalError;
+});
+
 describe('EditMealDialog', () => {
   const user = userEvent.setup({ delay: null })
 
@@ -81,7 +100,7 @@ describe('EditMealDialog', () => {
       }
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({})
+        json: () => Promise.resolve(mockMeal)
       })
     })
     
@@ -89,9 +108,11 @@ describe('EditMealDialog', () => {
     jest.setSystemTime(new Date('2024-11-27T12:00:00Z'))
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers()
     jest.useRealTimers()
+    // Wait for any pending state updates
+    await waitFor(() => {})
   })
 
   it('disables submit button when form is incomplete', async () => {
@@ -160,7 +181,11 @@ describe('EditMealDialog', () => {
   it('updates meal with new values when submitted', async () => {
     render(<EditMealDialog meal={mockMeal} />)
     
+    // Open dialog
     await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
     
     // Change food type
     await user.click(screen.getByRole('button', { name: 'DRY' }))
@@ -170,30 +195,62 @@ describe('EditMealDialog', () => {
     await user.clear(weightInput)
     await user.type(weightInput, '150')
     
-    // Submit form
+    // Submit form and wait for completion
     await user.click(screen.getByRole('button', { name: /save changes/i }))
     
-    expect(global.fetch).toHaveBeenCalledWith(`/api/meals/${mockMeal.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: expect.stringContaining('"foodType":"DRY","weight":150')
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(`/api/meals/${mockMeal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: expect.stringContaining('"foodType":"DRY","weight":150')
+      })
     })
-    
-    expect(mockUpdateMeal).toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(mockUpdateMeal).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 
   it('handles submission errors gracefully', async () => {
     const mockLoggerError = jest.fn()
     jest.spyOn(logger, 'error').mockImplementation(mockLoggerError)
-    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Failed to update'))
+    
+    // Mock fetch to return an error response
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url.includes('/api/cats')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCats)
+        })
+      }
+      return Promise.resolve({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Failed to update' })
+      })
+    })
 
     render(<EditMealDialog meal={mockMeal} />)
     
+    // Open dialog
     await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+    
+    // Submit form and wait for error handling
     await user.click(screen.getByRole('button', { name: /save changes/i }))
     
-    expect(mockLoggerError).toHaveBeenCalled()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mockLoggerError).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
   })
 
   it('updates date when calendar is used', async () => {
@@ -207,7 +264,7 @@ describe('EditMealDialog', () => {
       }
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({})
+        json: () => Promise.resolve(mockMeal)
       })
     })
 
@@ -220,8 +277,6 @@ describe('EditMealDialog', () => {
     
     // Open dialog
     await user.click(screen.getByRole('button', { name: /edit meal/i }))
-    
-    // Wait for dialog
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
@@ -230,16 +285,16 @@ describe('EditMealDialog', () => {
     const datePickerButton = screen.getByRole('button', { name: mockFormattedDate })
     await user.click(datePickerButton)
     
-    // Find and click tomorrow's date using the date number
+    // Find and click tomorrow's date
     const tomorrowButton = screen.getByRole('button', {
       name: /thursday, november 28th, 2024/i
     })
     await user.click(tomorrowButton)
     
-    // Submit form immediately after selecting date
+    // Submit form
     await user.click(screen.getByRole('button', { name: /save changes/i }))
     
-    // Verify the API call includes the new date
+    // Verify the API call
     await waitFor(() => {
       const lastCall = (global.fetch as jest.Mock).mock.calls.slice(-1)[0]
       expect(lastCall[0]).toBe(`/api/meals/${mockMeal.id}`)
@@ -247,7 +302,11 @@ describe('EditMealDialog', () => {
       
       const requestBody = JSON.parse(lastCall[1].body)
       expect(requestBody.createdAt).toContain('2024-11-28')
-    }, { timeout: 3000 })
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 
   it('closes dialog when cancel is clicked', async () => {

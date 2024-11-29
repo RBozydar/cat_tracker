@@ -12,28 +12,30 @@ interface ComparisonData {
   adherence: number
 }
 
-export function PetComparison() {
-  const [cats, setCats] = useState<Cat[]>([])
+interface PetComparisonProps {
+  initialCats: Cat[]
+}
+
+export function PetComparison({ initialCats }: PetComparisonProps) {
   const [data, setData] = useState<ComparisonData[]>([])
   const { meals } = useMeals()
   
-  // First, fetch cats
   useEffect(() => {
-    fetch('/api/cats')
-      .then(res => res.json())
-      .then(setCats)
-  }, [])
-
-  // Then, calculate stats when we have both cats and meals
-  useEffect(() => {
-    if (!cats.length || !meals) return
+    if (!meals) return
 
     const dateRange = getLastNDaysRange(7)
     const comparisonData: ComparisonData[] = []
 
-    cats.forEach(cat => {
+    initialCats.forEach(cat => {
       if (!cat.wetFood || !cat.dryFood) {
-        console.error('Missing food settings for cat:', cat)
+        console.error('Missing food settings for cat:', {
+          catId: cat.id,
+          catName: cat.name,
+          wetFoodId: cat.wetFoodId,
+          dryFoodId: cat.dryFoodId,
+          wetFood: cat.wetFood,
+          dryFood: cat.dryFood
+        })
         return
       }
 
@@ -75,9 +77,9 @@ export function PetComparison() {
     })
 
     setData(comparisonData)
-  }, [cats, meals])
+  }, [initialCats, meals])
 
-  if (!cats.length || !data.length) return null
+  if (!initialCats.length || !data.length) return null
 
   return (
     <Card className="p-4">
@@ -99,11 +101,12 @@ export function PetComparison() {
               }}
             />
             <Tooltip
+              cursor={false}
               content={({ payload, label }) => {
                 if (!payload?.length) return null
                 const data = payload[0].payload as ComparisonData
                 return (
-                  <div className="bg-background border border-border p-2 rounded-md text-sm">
+                  <div className="bg-background border border-border p-2 rounded-md text-sm shadow-md">
                     <p className="font-medium">{label}</p>
                     <p>Average: {data.average} kcal</p>
                     <p>Target: {data.target} kcal</p>
@@ -118,8 +121,9 @@ export function PetComparison() {
             />
             <Bar 
               dataKey="average" 
-              fill="hsl(var(--primary))"
+              fill="hsl(var(--chart-1))"
               radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
             />
           </BarChart>
         </ResponsiveContainer>

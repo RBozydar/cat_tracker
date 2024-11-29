@@ -2,13 +2,14 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MealProvider, useMeals } from '../meal-context'
 import { useEffect } from 'react'
+import type { Meal } from '@/lib/types'
 
 // Mock fetch
 global.fetch = jest.fn()
 
 // Test component that uses the context
 function TestComponent() {
-  const { meals, loading, fetchMeals, addMeal, updateMeal } = useMeals()
+  const { meals, loading, error, fetchMeals, addMeal, updateMeal } = useMeals()
   
   useEffect(() => {
     fetchMeals({
@@ -18,20 +19,31 @@ function TestComponent() {
   }, [fetchMeals])
 
   const handleAddMeal = () => {
-    const newMeal = { ...mockMeals[0], id: 2 }
+    const newMeal: Meal = {
+      id: 2,
+      catId: 1,
+      cat: mockCats[0],
+      foodType: 'WET',
+      weight: 100,
+      createdAt: new Date().toISOString()
+    }
     addMeal(newMeal)
   }
 
   const handleUpdateMeal = () => {
-    const updatedMeal = { ...mockMeals[0], weight: 200 }
+    const updatedMeal: Meal = {
+      ...mockMeals[0],
+      weight: 200
+    }
     updateMeal(updatedMeal)
   }
 
   if (loading) return <div>Loading...</div>
+  if (error) return <div data-testid="error-message">{error.message}</div>
   
   return (
     <div>
-      <div data-testid="meal-count">{meals.length}</div>
+      <div data-testid="meal-count">{meals?.length ?? 0}</div>
       <button onClick={handleAddMeal}>Add Meal</button>
       <button onClick={handleUpdateMeal}>Update Meal</button>
     </div>
@@ -44,15 +56,15 @@ const mockCats = [
     name: 'Ahmed',
     wetFoodId: 1,
     dryFoodId: 2,
-    wetFood: { id: 1, name: 'Wet Food', foodType: 'WET', calories: 100 },
-    dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY', calories: 300 },
+    wetFood: { id: 1, name: 'Wet Food', foodType: 'WET' as const, calories: 100 },
+    dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY' as const, calories: 300 },
     targetCalories: 250,
     weight: 4.5,
     weightUnit: 'kg'
   }
 ]
 
-const mockMeals = [
+const mockMeals: Meal[] = [
   {
     id: 1,
     catId: 1,
@@ -77,14 +89,6 @@ describe('MealContext', () => {
   })
 
   it('provides meals data and loading state', async () => {
-    // Mock fetch response
-    global.fetch = jest.fn().mockImplementationOnce(() => 
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockMeals)
-      })
-    )
-
     render(
       <MealProvider>
         <TestComponent />
@@ -101,13 +105,6 @@ describe('MealContext', () => {
   })
 
   it('updates meals correctly', async () => {
-    global.fetch = jest.fn().mockImplementationOnce(() => 
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockMeals)
-      })
-    )
-
     render(
       <MealProvider>
         <TestComponent />
@@ -131,8 +128,14 @@ describe('MealContext', () => {
   it('handles fetch errors gracefully', async () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
     
-    // Mock fetch to reject
-    global.fetch = jest.fn().mockRejectedValueOnce(new Error('Failed to fetch'))
+    // Mock fetch to return error response
+    ;(global.fetch as jest.Mock).mockImplementationOnce(() => 
+      Promise.resolve({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      })
+    )
 
     render(
       <MealProvider>
@@ -140,9 +143,12 @@ describe('MealContext', () => {
       </MealProvider>
     )
 
-    // Wait for error state to be handled and meals to be empty
+    // Wait for loading state
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+
+    // Wait for error state to be handled
     await waitFor(() => {
-      expect(screen.getByTestId('meal-count')).toHaveTextContent('0')
+      expect(screen.getByTestId('error-message')).toHaveTextContent('Failed to fetch meals')
     })
     
     // Verify error was logged

@@ -134,7 +134,8 @@ export function useCalorieStats(catId: number, dateRange?: DateRange) {
       recentMeals: relevantMeals.map(meal => ({
         createdAt: meal.createdAt,
         weight: meal.weight,
-        foodType: meal.foodType as 'WET' | 'DRY'
+        foodType: meal.foodType as 'WET' | 'DRY',
+        // Add any other fields needed for the portion history
       }))
     })
   }, [cat, meals, catId, dateRange])

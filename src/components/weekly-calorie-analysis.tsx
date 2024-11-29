@@ -1,8 +1,6 @@
 import { Card } from "@/components/ui/card"
 import { ArrowDownIcon, ArrowUpIcon } from "@radix-ui/react-icons"
 import { CalorieSummary } from "./calorie-summary"
-import { getLastNDaysRange } from "@/lib/date-utils"
-import { eachDayOfInterval, format } from "date-fns"
 import { useCalorieStats } from "@/hooks/use-calorie-stats"
 import { CalorieChart } from "./calorie-chart"
 import { MealHeatmap } from "./meal-heatmap"
@@ -18,10 +16,6 @@ interface WeeklyCalorieAnalysisProps {
 export function WeeklyCalorieAnalysis({ catId, dateRange }: WeeklyCalorieAnalysisProps) {
   const { weeklyAverage, trend, isIncreasing, chartData, recentMeals } = useCalorieStats(catId, dateRange)
   const { loading } = useMeals()
-
-  const days = dateRange?.from && dateRange?.to 
-    ? eachDayOfInterval({ start: dateRange.from, end: dateRange.to })
-    : eachDayOfInterval(getLastNDaysRange(7))
 
   if (loading) {
     return <div>Loading...</div>
@@ -57,24 +51,11 @@ export function WeeklyCalorieAnalysis({ catId, dateRange }: WeeklyCalorieAnalysi
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <CalorieChart data={chartData} />
+        <CalorieChart data={chartData} dateRange={dateRange} />
         <MealHeatmap meals={recentMeals} />
       </div>
 
       <PortionHistory meals={recentMeals} catId={catId} />
-
-      <div className="space-y-4">
-        <h3 className="font-medium">Daily Breakdown</h3>
-        <div className="grid gap-4">
-          {days.map((date) => (
-            <CalorieSummary 
-              key={date.toISOString()} 
-              selectedCatId={catId} 
-              date={format(date, 'dd/MM/yyyy')} 
-            />
-          ))}
-        </div>
-      </div>
     </div>
   )
 } 

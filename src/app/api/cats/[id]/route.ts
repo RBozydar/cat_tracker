@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { logger } from '@/lib/logger'
+import { catSchema } from '@/lib/schemas'
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -74,10 +74,17 @@ export async function GET(
     if (!cat) {
       return NextResponse.json({ error: 'Cat not found' }, { status: 404 })
     }
-    
-    return NextResponse.json(cat)
-  } catch (err: unknown) {
-    logger.error('Failed to fetch cat:', err)
+
+    const validated = catSchema.parse(cat)
+    return NextResponse.json(validated)
+  } catch (error) {
+    console.error('Failed to fetch cat:', error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: 'Invalid data format', 
+        details: error.errors 
+      }, { status: 500 })
+    }
     return NextResponse.json({ error: 'Failed to fetch cat' }, { status: 500 })
   }
 } 

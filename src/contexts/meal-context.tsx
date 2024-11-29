@@ -11,6 +11,9 @@ interface MealContextType {
   error: Error | null
   fetchMeals: (params: FetchParams) => Promise<void>
   refetch: () => Promise<void>
+  addMeal: (meal: Meal) => void
+  updateMeal: (meal: Meal) => void
+  deleteMeal: (id: number) => void
 }
 
 interface FetchParams {
@@ -26,6 +29,29 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
   const [meals, setMeals] = useState<Meal[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+
+  const addMeal = useCallback((newMeal: Meal) => {
+    setMeals(prevMeals => {
+      if (!prevMeals) return [newMeal]
+      return [newMeal, ...prevMeals]
+    })
+  }, [])
+
+  const updateMeal = useCallback((updatedMeal: Meal) => {
+    setMeals(prevMeals => {
+      if (!prevMeals) return null
+      return prevMeals.map(meal => 
+        meal.id === updatedMeal.id ? updatedMeal : meal
+      )
+    })
+  }, [])
+
+  const deleteMeal = useCallback((id: number) => {
+    setMeals(prevMeals => {
+      if (!prevMeals) return null
+      return prevMeals.filter(meal => meal.id !== id)
+    })
+  }, [])
 
   const fetchMeals = useCallback(async (params: FetchParams) => {
     try {
@@ -49,7 +75,7 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) throw new Error('Failed to fetch meals')
       
       const data = await response.json()
-      console.log('Fetched meals:', data)
+      // console.log('Fetched meals:', data)
       setMeals(data)
       setError(null)
     } catch (err) {
@@ -81,7 +107,10 @@ export function MealProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       fetchMeals,
-      refetch
+      refetch,
+      addMeal,
+      updateMeal,
+      deleteMeal
     }}>
       {children}
     </MealContext.Provider>

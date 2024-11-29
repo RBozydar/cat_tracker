@@ -15,14 +15,22 @@ interface PortionHistoryProps {
 
 export function PortionHistory({ meals, catId }: PortionHistoryProps) {
   const [cat, setCat] = useState<Cat | null>(null)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
+    setError(null)
     fetch(`/api/cats/${catId}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch cat data')
+        }
+        return res.json()
+      })
       .then(setCat)
+      .catch(setError)
   }, [catId])
 
-  if (!cat) return null
+  if (error || !cat) return null
 
   const data = meals.map(meal => ({
     time: new Date(meal.createdAt).getTime(),
