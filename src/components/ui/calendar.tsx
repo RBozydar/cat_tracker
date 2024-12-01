@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -27,21 +26,13 @@ function Calendar({
         month: 'gap-y-4 overflow-x-hidden w-full',
         caption: 'flex justify-center pt-1 relative items-center',
         caption_label: 'text-sm font-medium truncate',
-        button_next: cn(
-          buttonVariants({
-            variant: 'outline',
-            className:
-              'absolute right-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
-          }),
-        ),
-        button_previous: cn(
-          buttonVariants({
-            variant: 'outline',
-            className:
-              'absolute left-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
-          }),
-        ),
         nav: 'flex items-start justify-between absolute w-full',
+        nav_button: cn(
+          buttonVariants({ variant: 'outline' }),
+          'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'
+        ),
+        nav_button_previous: 'absolute left-0',
+        nav_button_next: 'absolute right-0',
         month_grid: 'mt-4',
         week: 'flex w-full mt-2',
         day: 'p-0 size-8 text-sm flex-1 flex items-center justify-center has-[button]:hover:!bg-accent rounded-md has-[button]:hover:aria-selected:!bg-primary has-[button]:hover:text-accent-foreground has-[button]:hover:aria-selected:text-primary-foreground',
@@ -61,18 +52,6 @@ function Calendar({
           'aria-selected:bg-accent hover:aria-selected:!bg-accent rounded-none aria-selected:text-accent-foreground hover:aria-selected:text-accent-foreground',
         hidden: 'invisible',
         ...classNames,
-      }}
-      components={{
-        PreviousMonthButton: () => (
-          <div>
-            <ChevronLeft className="h-4 w-4 cursor-pointer" />
-          </div>
-        ),
-        NextMonthButton: () => (
-          <div>
-            <ChevronRight className="h-4 w-4 cursor-pointer" />
-          </div>
-        ),
       }}
       {...props}
     />
