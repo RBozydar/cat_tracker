@@ -10,7 +10,7 @@ on:
     branches: [ "main" ]
 
 env:
-  DATABASE_URL: "{{ DATABASE_URL }}"
+  DATABASE_URL: "file:./dev.db"
 
 jobs:
   build:
