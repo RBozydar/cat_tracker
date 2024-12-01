@@ -383,4 +383,71 @@ describe('EditMealDialog', () => {
       expect(newWeightInput).toHaveValue(mockMeal.weight)
     })
   })
+
+  it('updates meal with new time when hour and minute are changed', async () => {
+    render(<EditMealDialog meal={mockMeal} />)
+    
+    // Open dialog
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+    
+    // Change hour to 15 (3 PM)
+    const hourSelect = screen.getAllByRole('combobox')[1] // First one is CatSelect
+    await user.click(hourSelect)
+    await user.click(screen.getByRole('option', { name: '15' }))
+    
+    // Change minute to 30
+    const minuteSelect = screen.getAllByRole('combobox')[2]
+    await user.click(minuteSelect)
+    await user.click(screen.getByRole('option', { name: '30' }))
+    
+    // Submit form
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    
+    // Verify the API call includes the new time
+    await waitFor(() => {
+      const fetchCall = (global.fetch as jest.Mock).mock.calls.find(
+        call => call[0] === `/api/meals/${mockMeal.id}`
+      )
+      const body = JSON.parse(fetchCall[1].body)
+      const date = new Date(body.createdAt)
+      expect(date.getUTCHours()).toBe(15)
+      expect(date.getUTCMinutes()).toBe(30)
+    })
+  })
+
+  it('preserves time when only date is changed', async () => {
+    const initialDate = new Date('2024-01-01T14:30:00Z')
+    const mealWithTime = {
+      ...mockMeal,
+      createdAt: initialDate.toISOString()
+    }
+    
+    render(<EditMealDialog meal={mealWithTime} />)
+    
+    // Open dialog
+    await user.click(screen.getByRole('button', { name: /edit meal/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+    
+    // Click a new date in the calendar
+    await user.click(screen.getByRole('button', { name: /thursday, november 28th, 2024/i }))
+    
+    // Submit form
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    
+    // Verify the API call preserves the original time
+    await waitFor(() => {
+      const fetchCall = (global.fetch as jest.Mock).mock.calls.find(
+        call => call[0] === `/api/meals/${mockMeal.id}`
+      )
+      const body = JSON.parse(fetchCall[1].body)
+      const date = new Date(body.createdAt)
+      expect(date.getUTCHours()).toBe(14)
+      expect(date.getUTCMinutes()).toBe(30)
+    })
+  })
 }) 
