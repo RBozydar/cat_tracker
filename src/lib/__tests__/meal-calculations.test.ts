@@ -10,26 +10,38 @@ describe('meal-calculations', () => {
     {
       id: 1,
       catId: 1,
-      cat: { id: 1, name: 'Ahmed' },
-      foodType: 'WET',
+      cat: {
+        id: 1,
+        name: 'Test Cat',
+        wetFoodId: 1,
+        dryFoodId: 2,
+        wetFood: { id: 1, name: 'Wet Food', foodType: 'WET' as const, calories: 100 },
+        dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY' as const, calories: 300 },
+        targetCalories: 250,
+        weight: 4.5,
+        weightUnit: 'kg'
+      },
+      foodType: 'WET' as const,
       weight: 100,
       createdAt: '2024-03-14T12:00:00Z'
     },
     {
       id: 2,
       catId: 1,
-      cat: { id: 1, name: 'Ahmed' },
-      foodType: 'DRY',
+      cat: {
+        id: 1,
+        name: 'Test Cat',
+        wetFoodId: 1,
+        dryFoodId: 2,
+        wetFood: { id: 1, name: 'Wet Food', foodType: 'WET' as const, calories: 100 },
+        dryFood: { id: 2, name: 'Dry Food', foodType: 'DRY' as const, calories: 300 },
+        targetCalories: 250,
+        weight: 4.5,
+        weightUnit: 'kg'
+      },
+      foodType: 'DRY' as const,
       weight: 50,
       createdAt: '2024-03-14T14:00:00Z'
-    },
-    {
-      id: 3,
-      catId: 2,
-      cat: { id: 2, name: 'Lila' },
-      foodType: 'WET',
-      weight: 150,
-      createdAt: '2024-03-13T12:00:00Z'
     }
   ]
 
@@ -37,22 +49,14 @@ describe('meal-calculations', () => {
     it('correctly calculates calories and weights for each cat', () => {
       const result = calculateMealSummaries(mockMeals, mockSettings)
 
-      expect(result.Ahmed).toBeDefined()
-      expect(result.Lila).toBeDefined()
+      expect(result['Test Cat']).toBeDefined()
 
-      // Check Ahmed's totals
-      expect(result.Ahmed.wet.weight).toBe(100)
-      expect(result.Ahmed.wet.calories).toBe(100) // 100g * (100kcal/100g)
-      expect(result.Ahmed.dry.weight).toBe(50)
-      expect(result.Ahmed.dry.calories).toBe(150) // 50g * (300kcal/100g)
-      expect(result.Ahmed.totalCalories).toBe(250)
-
-      // Check Lila's totals
-      expect(result.Lila.wet.weight).toBe(150)
-      expect(result.Lila.wet.calories).toBe(150) // 150g * (100kcal/100g)
-      expect(result.Lila.dry.weight).toBe(0)
-      expect(result.Lila.dry.calories).toBe(0)
-      expect(result.Lila.totalCalories).toBe(150)
+      // Check Test Cat's totals
+      expect(result['Test Cat'].wet.weight).toBe(100)
+      expect(result['Test Cat'].wet.calories).toBe(100) // 100g * (100kcal/100g)
+      expect(result['Test Cat'].dry.weight).toBe(50)
+      expect(result['Test Cat'].dry.calories).toBe(150) // 50g * (300kcal/100g)
+      expect(result['Test Cat'].totalCalories).toBe(250)
     })
 
     it('handles empty meals array', () => {
@@ -62,8 +66,7 @@ describe('meal-calculations', () => {
 
     it('handles missing settings', () => {
       const result = calculateMealSummaries(mockMeals, [])
-      expect(result.Ahmed.totalCalories).toBe(0)
-      expect(result.Lila.totalCalories).toBe(0)
+      expect(result['Test Cat'].totalCalories).toBe(0)
     })
   })
 

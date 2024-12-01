@@ -1,3 +1,13 @@
+export interface FoodSettingHistory {
+  calories: number
+  effectiveFrom: Date
+}
+
+export interface CatHistory {
+  targetCalories: number
+  effectiveFrom: Date
+}
+
 export type Cat = {
   id: number
   name: string
@@ -8,6 +18,11 @@ export type Cat = {
   targetCalories: number
   weight: number
   weightUnit: string
+  history?: {
+    targetCalories: CatHistory[]
+    wetFood: FoodSettingHistory[]
+    dryFood: FoodSettingHistory[]
+  }
 }
 
 export type FoodSetting = {
@@ -21,7 +36,7 @@ export type Meal = {
   id: number
   catId: number
   cat: Cat
-  foodType: string
+  foodType: 'WET' | 'DRY'
   weight: number
   createdAt: string
 } 

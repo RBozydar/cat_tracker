@@ -19,6 +19,13 @@ import type { Meal } from '@/lib/types'
 import { DeleteMealDialog } from './delete-meal-dialog'
 import { Calendar } from "@/components/ui/calendar"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -32,12 +39,20 @@ interface EditMealDialogProps {
   meal: Meal
 }
 
+const hours = Array.from({ length: 24 }, (_, i) => i)
+const minutes = Array.from({ length: 60 }, (_, i) => i)
+
 export function EditMealDialog({ meal }: EditMealDialogProps) {
   const { updateMeal } = useMeals()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const timezone = getUserTimezone()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    catId: number;
+    foodType: 'WET' | 'DRY';
+    weight: string;
+    date: TZDate;
+  }>({
     catId: meal.catId,
     foodType: meal.foodType,
     weight: meal.weight.toString(),
@@ -81,11 +96,11 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
       timezone
     }
     
-    console.log('Submitting meal update:', {
-      mealId: meal.id,
-      payload,
-      rawFormData: formData
-    })
+    // console.log('Submitting meal update:', {
+    //   mealId: meal.id,
+    //   payload,
+    //   rawFormData: formData
+    // })
 
     try {
       const response = await fetch(`/api/meals/${meal.id}`, {
@@ -93,7 +108,7 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      console.log('Response:', 'seems ok')
+      // console.log('Response:', 'seems ok')
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -148,7 +163,7 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
                     key={type}
                     type="button"
                     variant={formData.foodType === type ? 'default' : 'outline'}
-                    onClick={() => setFormData(prev => ({ ...prev, foodType: type }))}
+                    onClick={() => setFormData(prev => ({ ...prev, foodType: type as 'WET' | 'DRY' }))}
                   >
                     {type}
                   </Button>
@@ -169,38 +184,78 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date ? formatDateTime(formData.date, timezone) : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.date}
-                    onSelect={(date) => {
-                      if (date) {
-                        const originalTime = formData.date
-                        const newDate = TZDate.tz(timezone, date)
-                        newDate.setHours(originalTime.getHours())
-                        newDate.setMinutes(originalTime.getMinutes())
-                        newDate.setSeconds(originalTime.getSeconds())
-                        setFormData(prev => ({ ...prev, date: newDate }))
-                      }
+              <label className="text-sm font-medium">Date and Time</label>
+              <div className="flex flex-col gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.date ? formatDateTime(formData.date, timezone) : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.date}
+                      onSelect={(date) => {
+                        if (date) {
+                          const newDate = TZDate.tz(timezone, date)
+                          newDate.setUTCHours(formData.date.getUTCHours())
+                          newDate.setUTCMinutes(formData.date.getUTCMinutes())
+                          setFormData(prev => ({ ...prev, date: newDate }))
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.date.getUTCHours().toString()}
+                    onValueChange={(value) => {
+                      const newDate = new TZDate(formData.date)
+                      newDate.setUTCHours(parseInt(value))
+                      setFormData(prev => ({ ...prev, date: newDate }))
                     }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Hour" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hours.map((hour) => (
+                        <SelectItem key={hour} value={hour.toString()}>
+                          {hour.toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={formData.date.getUTCMinutes().toString()}
+                    onValueChange={(value) => {
+                      const newDate = new TZDate(formData.date)
+                      newDate.setUTCMinutes(parseInt(value))
+                      setFormData(prev => ({ ...prev, date: newDate }))
+                    }}
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Minute" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {minutes.map((minute) => (
+                        <SelectItem key={minute} value={minute.toString()}>
+                          {minute.toString().padStart(2, '0')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-between">

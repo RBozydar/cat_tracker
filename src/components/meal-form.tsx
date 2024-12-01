@@ -18,6 +18,8 @@ const FOOD_TYPES = [
   { id: 'DRY', label: 'Dry Food' },
 ]
 
+export { MealForm }
+
 export function MealFormWrapper() {
   return (
     <Suspense fallback={<MealFormSkeleton />}>
@@ -55,14 +57,18 @@ function MealForm() {
 
       const meal = await response.json()
       addMeal(meal)
-      setSelectedCat(null)
-      setFoodType(null)
-      setWeight('')
-      setError(null)
+      resetForm()
     } catch (error) {
       logger.error('Failed to submit meal:', error)
       setError('Could not save the meal, please try again later!')
+      resetForm()
     }
+  }
+
+  const resetForm = () => {
+    setSelectedCat(null)
+    setFoodType(null)
+    setWeight('')
   }
 
   const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {

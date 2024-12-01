@@ -100,3 +100,20 @@ export function createDateRangeQuery(startDate: string, timezone: string, endDat
 //     // })
 //   }
 // } 
+
+export function parseDisplayDate(displayDate: string | undefined, timezone: string): TZDate {
+  if (!displayDate) {
+    return TZDate.tz(timezone, new Date())
+  }
+
+  // Expected format: dd/MM/yyyy
+  const [day, month, year] = displayDate.split('/')
+  if (!day || !month || !year) {
+    console.warn('Invalid date format:', displayDate)
+    return TZDate.tz(timezone, new Date())
+  }
+
+  // Create date in YYYY-MM-DD format
+  const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  return TZDate.tz(timezone, new Date(isoDate))
+} 

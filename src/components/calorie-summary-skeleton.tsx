@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export function CalorieSummarySkeleton() {
   return (
-    <Card className="p-4 space-y-3">
+    <Card className="p-4 space-y-3" data-testid="calorie-summary-skeleton">
       <Skeleton className="h-5 w-40" />
       <div className="space-y-2">
         {[...Array(4)].map((_, i) => (

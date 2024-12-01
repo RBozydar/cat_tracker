@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { catsSchema } from '@/lib/schemas'
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -30,8 +31,25 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const cats = await prisma.cat.findMany({
-    orderBy: { id: 'asc' }
-  })
-  return NextResponse.json(cats)
+  try {
+    const cats = await prisma.cat.findMany({
+      orderBy: { id: 'asc' },
+      include: {
+        wetFood: true,
+        dryFood: true
+      }
+    })
+
+    const validated = catsSchema.parse(cats)
+    return NextResponse.json(validated)
+  } catch (error) {
+    console.error('Failed to fetch cats:', error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: 'Invalid data format', 
+        details: error.errors 
+      }, { status: 500 })
+    }
+    return NextResponse.json({ error: 'Failed to fetch cats' }, { status: 500 })
+  }
 } 

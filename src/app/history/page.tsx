@@ -1,10 +1,20 @@
-export default function HistoryPage() {
+import { Suspense } from 'react'
+import { prisma } from '@/lib/db'
+import { HistoryClient } from '@/components/history-client'
+
+export const dynamic = 'force-dynamic'
+
+export default async function HistoryPage() {
+  const cats = await prisma.cat.findMany({
+    include: {
+      wetFood: true,
+      dryFood: true
+    }
+  })
+
   return (
-    <main className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-8">History</h1>
-      <div className="text-center text-muted-foreground py-8">
-        Coming soon! This feature is not implemented yet.
-      </div>
-    </main>
+    <Suspense fallback={<div>Loading...</div>}>
+      <HistoryClient initialCats={cats} />
+    </Suspense>
   )
 } 

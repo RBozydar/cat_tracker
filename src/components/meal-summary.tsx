@@ -82,19 +82,19 @@ export function MealSummary({ days = 1, SkeletonComponent }: MealSummaryProps) {
       return dateObj >= start
     })
 
-  console.log('Sorted dates:', sortedDates)
+  // console.log('Sorted dates:', sortedDates)
 
   return (
     <div className="space-y-4">
       {days > 1 && <h2 className="text-xl font-semibold">Last {days} Days Summary</h2>}
       {sortedDates.map(([date, catIds]) => {
-        console.log('Rendering date:', date, 'catIds:', Array.from(catIds))
+        // console.log('Rendering date:', date, 'catIds:', Array.from(catIds))
         return (
           <Card key={date} className={days > 1 ? "p-4" : ""}>
             {days > 1 && <h3 className="font-medium mb-3">{toUserLocaleDateString(date, timezone)}</h3>}
             <div className={`space-y-4 ${days > 1 ? "pl-4" : ""}`}>
               {Array.from(catIds).map((catId) => {
-                console.log('Rendering CalorieSummary:', { catId, date })
+                // console.log('Rendering CalorieSummary:', { catId, date })
                 return (
                   <CalorieSummary 
                     key={catId} 
