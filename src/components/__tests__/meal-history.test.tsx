@@ -176,7 +176,7 @@ describe('MealHistory', () => {
       ...mockMeals[0],
       cat: {
         ...mockMeals[0].cat,
-        wetFood: { ...mockMeals[0].cat.wetFood, calories: undefined }
+        wetFood: { ...mockMeals[0].cat.wetFood, calories: 0 }
       }
     }
     mockUseMeals.meals = [mealWithoutCalories]

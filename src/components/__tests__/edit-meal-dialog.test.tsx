@@ -59,11 +59,22 @@ const mockMeal: Meal = {
 
 // Mock timezone
 const mockTimezone = 'UTC'
-jest.mock('@/lib/date-utils', () => ({
-  ...jest.requireActual('@/lib/date-utils'),
-  getUserTimezone: () => mockTimezone,
-  formatDateTime: jest.fn()
-}))
+jest.mock('@/lib/date-utils', () => {
+  const actual = jest.requireActual('@/lib/date-utils')
+  return {
+    ...actual,
+    getUserTimezone: () => mockTimezone,
+    formatDateTime: jest.fn(),
+    TZDate: {
+      tz: (timezone: string, date?: Date) => {
+        if (!date) return new Date()
+        const newDate = new Date(date)
+        // Preserve UTC time
+        return newDate
+      }
+    }
+  }
+})
 
 // Mock console.error to suppress act() warnings
 const originalError = console.error;
@@ -83,6 +94,24 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError;
 });
+
+// Mock the Calendar component
+jest.mock('@/components/ui/calendar', () => ({
+  Calendar: ({ onSelect }: { onSelect: (date: Date) => void }) => (
+    <div data-testid="mock-calendar">
+      <button
+        onClick={() => {
+          console.log('Selecting new date in mock calendar')
+          const newDate = new Date(Date.UTC(2024, 10, 28, 12, 0, 0))
+          onSelect(newDate)
+        }}
+        aria-label="thursday, november 28th, 2024"
+      >
+        28
+      </button>
+    </div>
+  )
+}))
 
 describe('EditMealDialog', () => {
   const user = userEvent.setup({ delay: null })
@@ -268,12 +297,19 @@ describe('EditMealDialog', () => {
       })
     })
 
-    // Set up initial date
-    jest.setSystemTime(new Date('2024-11-27T12:00:00Z'))
+    // Set up initial date with explicit UTC time
+    const initialDate = new Date(Date.UTC(2024, 10, 27, 12, 0, 0))
+    jest.setSystemTime(initialDate)
     const mockFormattedDate = 'Nov 27, 2024, 12:00 PM'
     ;(formatDateTime as jest.Mock).mockReturnValue(mockFormattedDate)
 
-    render(<EditMealDialog meal={mockMeal} />)
+    // Create meal with specific UTC date
+    const testMeal = {
+      ...mockMeal,
+      createdAt: initialDate.toISOString()
+    }
+
+    render(<EditMealDialog meal={testMeal} />)
     
     // Open dialog
     await user.click(screen.getByRole('button', { name: /edit meal/i }))
@@ -285,14 +321,18 @@ describe('EditMealDialog', () => {
     const datePickerButton = screen.getByRole('button', { name: mockFormattedDate })
     await user.click(datePickerButton)
     
-    // Find and click tomorrow's date
+    // Find and click tomorrow's date in our mock calendar
     const tomorrowButton = screen.getByRole('button', {
       name: /thursday, november 28th, 2024/i
     })
     await user.click(tomorrowButton)
     
+    // Mock the formatted date for the new selection
+    ;(formatDateTime as jest.Mock).mockReturnValue('Nov 28, 2024, 12:00 PM')
+    
     // Submit form
-    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    const submitButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(submitButton)
     
     // Verify the API call
     await waitFor(() => {
@@ -301,7 +341,11 @@ describe('EditMealDialog', () => {
       expect(lastCall[1].method).toBe('PATCH')
       
       const requestBody = JSON.parse(lastCall[1].body)
-      expect(requestBody.createdAt).toContain('2024-11-28')
+      console.log('Request body date:', requestBody.createdAt)
+      const date = new Date(requestBody.createdAt)
+      expect(date.getUTCDate()).toBe(28)
+      expect(date.getUTCMonth()).toBe(10) // November is 10 in zero-based months
+      expect(date.getUTCFullYear()).toBe(2024)
     })
 
     await waitFor(() => {

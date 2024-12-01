@@ -50,11 +50,11 @@ export function MealFormCalorieSummary({ selectedCatId }: MealFormCalorieSummary
     const today = TZDate.tz(timezone)
     const todayStr = toUserLocaleDateString(today, timezone)
     
-    const filtered = meals.filter(meal => {
+    const filtered = meals?.filter(meal => {
       const mealDate = TZDate.tz(timezone, new Date(meal.createdAt))
       return meal.catId === selectedCatId && 
              toUserLocaleDateString(mealDate, timezone) === todayStr
-    })
+    }) ?? []
     setTodaysMeals(filtered)
   }, [meals, selectedCatId])
 

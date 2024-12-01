@@ -79,7 +79,15 @@ export function PetComparison({ initialCats }: PetComparisonProps) {
     setData(comparisonData)
   }, [initialCats, meals])
 
-  if (!initialCats.length || !data.length) return null
+  if (!initialCats.length) return null
+  if (!data.length) {
+    return (
+      <Card className="p-4">
+        <h3 className="font-medium mb-4">Pet Comparison</h3>
+        <p className="text-muted-foreground text-sm">No data available for selected period</p>
+      </Card>
+    )
+  }
 
   return (
     <Card className="p-4">

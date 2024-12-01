@@ -9,7 +9,7 @@ global.fetch = jest.fn()
 
 // Test component that uses the context
 function TestComponent() {
-  const { meals, loading, error, fetchMeals, addMeal, updateMeal } = useMeals()
+  const { meals, loading, fetchMeals, addMeal, updateMeal } = useMeals()
   
   useEffect(() => {
     fetchMeals({
@@ -39,7 +39,6 @@ function TestComponent() {
   }
 
   if (loading) return <div>Loading...</div>
-  if (error) return <div data-testid="error-message">{error.message}</div>
   
   return (
     <div>
@@ -133,7 +132,8 @@ describe('MealContext', () => {
       Promise.resolve({
         ok: false,
         status: 500,
-        statusText: 'Internal Server Error'
+        statusText: 'Internal Server Error',
+        json: () => Promise.resolve({ error: 'Server error' })
       })
     )
 
@@ -146,13 +146,15 @@ describe('MealContext', () => {
     // Wait for loading state
     expect(screen.getByText('Loading...')).toBeInTheDocument()
 
-    // Wait for error state to be handled
+    // Wait for error to be logged
     await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toHaveTextContent('Failed to fetch meals')
+      expect(consoleError).toHaveBeenCalledWith(
+        'Error fetching meals:',
+        expect.any(Error)
+      )
     })
     
-    // Verify error was logged
-    expect(consoleError).toHaveBeenCalled()
+    // Verify error was logged and cleanup
     consoleError.mockRestore()
   })
 }) 

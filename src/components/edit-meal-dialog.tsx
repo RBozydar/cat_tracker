@@ -194,11 +194,14 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
                     selected={formData.date}
                     onSelect={(date) => {
                       if (date) {
+                        console.log('Calendar onSelect called with:', date)
                         const originalTime = formData.date
                         const newDate = TZDate.tz(timezone, date)
-                        newDate.setHours(originalTime.getHours())
-                        newDate.setMinutes(originalTime.getMinutes())
-                        newDate.setSeconds(originalTime.getSeconds())
+                        console.log('New date before time adjustment:', newDate)
+                        newDate.setUTCHours(originalTime.getUTCHours())
+                        newDate.setUTCMinutes(originalTime.getUTCMinutes())
+                        newDate.setUTCSeconds(originalTime.getUTCSeconds())
+                        console.log('Final date after adjustment:', newDate)
                         setFormData(prev => ({ ...prev, date: newDate }))
                       }
                     }}

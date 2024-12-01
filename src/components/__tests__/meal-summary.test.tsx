@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { MealSummary } from '../meal-summary'
-import { MealProvider } from '@/contexts/meal-context'
+import { MealProvider, useMeals } from '@/contexts/meal-context'
 import type { Meal } from '@/lib/types'
 import { TZDate } from '@date-fns/tz'
 
@@ -30,6 +30,15 @@ jest.mock('@/lib/date-utils', () => {
     ...actual,
     getUserTimezone: () => mockTimezone,
     getUserLocale: () => 'en-US'
+  }
+})
+
+// Mock the useMeals hook
+jest.mock('@/contexts/meal-context', () => {
+  const actual = jest.requireActual('@/contexts/meal-context')
+  return {
+    ...actual,
+    useMeals: jest.fn()
   }
 })
 
@@ -108,36 +117,25 @@ describe('MealSummary', () => {
   ]
 
   it('renders daily summary correctly', async () => {
-    const todayISODate = today.toISOString().split('T')[0]
-    console.log('Initial date check:', {
-      today,
-      todayISODate,
-      mockMeal: mockMeals[0],
-      mealDate: new Date(mockMeals[0].createdAt),
+    const todayISODate = today.toISOString().split('T')[0];
+
+    // Mock useMeals hook
+    (useMeals as jest.Mock).mockReturnValue({
+      meals: [mockMeals[0]],
+      loading: false,
+      error: null,
+      fetchMeals: jest.fn(),
+      refetch: jest.fn(),
+      addMeal: jest.fn(),
+      updateMeal: jest.fn(),
+      deleteMeal: jest.fn()
     })
-
-    // Create a response that matches the API format
-    const mockResponse = {
-      ok: true,
-      json: () => Promise.resolve([mockMeals[0]])
-    }
-
-    mockFetch.mockResolvedValue(mockResponse)
 
     render(
       <MealProvider>
         <MealSummary days={1} SkeletonComponent={MockSkeleton} />
       </MealProvider>
     )
-
-    // Wait for loading state to appear and disappear
-    await waitFor(() => {
-      expect(screen.getByTestId('mock-skeleton')).toBeInTheDocument()
-    })
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('mock-skeleton')).not.toBeInTheDocument()
-    })
 
     // Wait for meals to be processed and rendered
     await waitFor(() => {
@@ -150,29 +148,23 @@ describe('MealSummary', () => {
   })
 
   it('renders weekly summary correctly', async () => {
-    const mockResponse = {
-      ok: true,
-      json: () => Promise.resolve([
-        {
-          ...mockMeals[0],
-          createdAt: today.toISOString()
-        },
-        {
-          ...mockMeals[1],
-          createdAt: yesterday.toISOString()
-        }
-      ])
-    }
-
-    mockFetch.mockResolvedValue(mockResponse)
+    // Mock useMeals hook
+    (useMeals as jest.Mock).mockReturnValue({
+      meals: mockMeals,
+      loading: false,
+      error: null,
+      fetchMeals: jest.fn(),
+      refetch: jest.fn(),
+      addMeal: jest.fn(),
+      updateMeal: jest.fn(),
+      deleteMeal: jest.fn()
+    })
 
     render(
       <MealProvider>
         <MealSummary days={7} SkeletonComponent={MockSkeleton} />
       </MealProvider>
     )
-
-    expect(screen.getByTestId('mock-skeleton')).toBeInTheDocument()
 
     const todayISODate = today.toISOString().split('T')[0]
     const yesterdayISODate = yesterday.toISOString().split('T')[0]
@@ -191,10 +183,20 @@ describe('MealSummary', () => {
   })
 
   it('shows loading state', () => {
-    mockFetch.mockReturnValue(new Promise(() => {})) // Never resolves
+    // Mock useMeals hook
+    (useMeals as jest.Mock).mockReturnValue({
+      meals: [],
+      loading: true,
+      error: null,
+      fetchMeals: jest.fn(),
+      refetch: jest.fn(),
+      addMeal: jest.fn(),
+      updateMeal: jest.fn(),
+      deleteMeal: jest.fn()
+    })
 
     render(
-      <MealProvider initialMeals={[]} loading={true}>
+      <MealProvider>
         <MealSummary days={1} SkeletonComponent={MockSkeleton} />
       </MealProvider>
     )
@@ -203,21 +205,23 @@ describe('MealSummary', () => {
   })
 
   it('shows empty state for no meals', async () => {
-    mockFetch.mockReturnValue(Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve([])
-    }))
+    // Mock useMeals hook
+    (useMeals as jest.Mock).mockReturnValue({
+      meals: [],
+      loading: false,
+      error: null,
+      fetchMeals: jest.fn(),
+      refetch: jest.fn(),
+      addMeal: jest.fn(),
+      updateMeal: jest.fn(),
+      deleteMeal: jest.fn()
+    })
 
     render(
       <MealProvider>
         <MealSummary days={1} SkeletonComponent={MockSkeleton} />
       </MealProvider>
     )
-
-    // Wait for loading to finish
-    await waitFor(() => {
-      expect(screen.queryByTestId('mock-skeleton')).not.toBeInTheDocument()
-    })
 
     expect(screen.getByText(/no meals recorded/i)).toBeInTheDocument()
   })

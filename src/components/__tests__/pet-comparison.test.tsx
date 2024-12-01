@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { PetComparison } from '../pet-comparison'
 import type { Cat, FoodSetting } from '@/lib/types'
+import { useMeals } from '@/contexts/meal-context'
 
 interface ComparisonData {
   name: string
@@ -65,7 +66,7 @@ const mockUseMeals = {
 
 // Mock meal context
 jest.mock('@/contexts/meal-context', () => ({
-  useMeals: () => mockUseMeals
+  useMeals: jest.fn(() => mockUseMeals)
 }))
 
 describe('PetComparison', () => {
@@ -86,11 +87,19 @@ describe('PetComparison', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('handles missing meals data', () => {
-    mockUseMeals.meals = null
-    const { container } = render(<PetComparison initialCats={[mockCat]} />)
-    expect(container).toBeEmptyDOMElement()
-    mockUseMeals.meals = mockMeals
+  it('handles missing meals data', async () => {
+    // Mock meals as undefined to trigger the early return in useEffect
+    const mockUseMealsEmpty = {
+      meals: undefined
+    };
+    (useMeals as jest.Mock).mockReturnValueOnce(mockUseMealsEmpty)
+    
+    render(<PetComparison initialCats={[mockCat]} />)
+    
+    // Add a small delay to allow state updates
+    await new Promise(resolve => setTimeout(resolve, 0))
+    
+    expect(screen.getByText('No data available for selected period')).toBeInTheDocument()
   })
 
   it('applies correct color classes based on adherence', () => {
