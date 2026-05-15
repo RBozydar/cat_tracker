@@ -23,6 +23,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const validated = createSchema.parse(body)
+    const requestId = request.headers.get('x-request-id')
+    const timestamp = request.headers.get('x-request-timestamp')
     
     const tzDate = TZDate.tz(validated.timezone)
     console.log('Creating meal with date:', {
@@ -47,7 +49,16 @@ export async function POST(request: Request) {
       }
     })
     
-    return NextResponse.json(meal)
+    const headers = new Headers()
+    if (requestId && timestamp) {
+      headers.set('x-request-id', requestId)
+      headers.set('x-request-timestamp', timestamp)
+    }
+    
+    return new NextResponse(JSON.stringify(meal), {
+      headers,
+      status: 200
+    })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
@@ -63,6 +74,8 @@ export async function GET(request: Request) {
   const startDate = searchParams.get('startDate')
   const endDate = searchParams.get('endDate')
   const timezone = searchParams.get('timezone')
+  const requestId = searchParams.get('requestId')
+  const timestamp = searchParams.get('timestamp')
 
   if (!startDate || !timezone) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
@@ -98,7 +111,16 @@ export async function GET(request: Request) {
       }
     })
     
-    return NextResponse.json(meals)
+    const headers = new Headers()
+    if (requestId && timestamp) {
+      headers.set('x-request-id', requestId)
+      headers.set('x-request-timestamp', timestamp)
+    }
+    
+    return new NextResponse(JSON.stringify(meals), {
+      headers,
+      status: 200
+    })
   } catch (error) {
     console.error('Failed to fetch meals:', error)
     return NextResponse.json({ 

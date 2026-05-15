@@ -22,6 +22,8 @@ export async function PATCH(
     const body = await request.json()
     const validated = updateSchema.parse(body)
     const mealId = parseInt(params.id)
+    const requestId = request.headers.get('x-request-id')
+    const timestamp = request.headers.get('x-request-timestamp')
 
     // Handle timezone-aware date
     const updateData = { ...validated }
@@ -48,7 +50,16 @@ export async function PATCH(
     })
     console.log('Meal updated:', meal)
     
-    return NextResponse.json(meal)
+    const headers = new Headers()
+    if (requestId && timestamp) {
+      headers.set('x-request-id', requestId)
+      headers.set('x-request-timestamp', timestamp)
+    }
+    
+    return new NextResponse(JSON.stringify(meal), {
+      headers,
+      status: 200
+    })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
@@ -59,12 +70,14 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     const params = await context.params
     const mealId = parseInt(params.id)
+    const requestId = request.headers.get('x-request-id')
+    const timestamp = request.headers.get('x-request-timestamp')
     
     // Check if meal exists first
     const meal = await prisma.meal.findUnique({
@@ -82,7 +95,16 @@ export async function DELETE(
       where: { id: mealId }
     })
     
-    return new NextResponse(null, { status: 204 })
+    const headers = new Headers()
+    if (requestId && timestamp) {
+      headers.set('x-request-id', requestId)
+      headers.set('x-request-timestamp', timestamp)
+    }
+    
+    return new NextResponse(null, { 
+      headers,
+      status: 204 
+    })
   } catch (error) {
     console.error('Failed to delete meal:', error)
     return NextResponse.json(

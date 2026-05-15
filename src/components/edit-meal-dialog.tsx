@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils"
 import { formatDateTime, getUserTimezone } from '@/lib/date-utils'
 import { ErrorBoundary } from './error-boundary'
 import { TZDate } from '@date-fns/tz'
+import { v4 as uuidv4 } from 'uuid'
 
 interface EditMealDialogProps {
   meal: Meal
@@ -88,6 +89,9 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
       return
     }
 
+    const requestId = uuidv4()
+    const timestamp = Date.now()
+
     const payload = {
       catId: Number(formData.catId),
       foodType: formData.foodType as 'WET' | 'DRY',
@@ -95,20 +99,17 @@ export function EditMealDialog({ meal }: EditMealDialogProps) {
       createdAt: formData.date.toISOString(),
       timezone
     }
-    
-    // console.log('Submitting meal update:', {
-    //   mealId: meal.id,
-    //   payload,
-    //   rawFormData: formData
-    // })
 
     try {
       const response = await fetch(`/api/meals/${meal.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-request-id': requestId,
+          'x-request-timestamp': timestamp.toString()
+        },
         body: JSON.stringify(payload)
       })
-      // console.log('Response:', 'seems ok')
 
       if (!response.ok) {
         const errorData = await response.json()

@@ -1,7 +1,11 @@
+- meal form update doesnt reload components / page
+
+
 - toast notifications for succesful meal submission
 - Meal History page
     - Average calories consumed per cat/pet per day over last 7 days compared to target calories for the cat/pet
     - Last 7 days summary detailed
+    - add charts from shacdn charts
 
 Authentication & Household Management
 Based on your requirements, I recommend:

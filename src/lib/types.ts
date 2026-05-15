@@ -39,4 +39,20 @@ export type Meal = {
   foodType: 'WET' | 'DRY'
   weight: number
   createdAt: string
+}
+
+export type RequestMetadata = {
+  requestId: string
+  timestamp: number
+  // Future:
+  // userId?: string 
+}
+
+export type FetchState = {
+  latestRequest: RequestMetadata | null
+  // Future:
+  // userCache: Map<string, {
+  //   data: any
+  //   timestamp: number
+  // }>
 } 

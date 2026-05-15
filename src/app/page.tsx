@@ -7,6 +7,11 @@ import { WeeklySummary } from '@/components/weekly-summary'
 import { Card } from '@/components/ui/card'
 
 export default function Home() {
+  console.log('[Page] Rendering Home:', { 
+    isServer: typeof window === 'undefined',
+    timestamp: Date.now() 
+  })
+
   return (
     <div className="space-y-8">
       <div className="grid gap-6">

@@ -17,6 +17,12 @@ export function MealSummary({ days = 1, SkeletonComponent }: MealSummaryProps) {
   const { meals = [], loading, fetchMeals } = useMeals()
   const [mealsByDateAndCat, setMealsByDateAndCat] = useState(new Map<string, Set<number>>())
   const timezone = getUserTimezone()
+  console.log('[MealSummary] Rendering:', {
+    days,
+    mealsCount: meals?.length,
+    loading,
+    timestamp: Date.now()
+  })
 
   useEffect(() => {
     if (days === 1) {

@@ -12,6 +12,7 @@ import { useMeals } from '@/contexts/meal-context'
 import { logger } from '@/lib/logger'
 import { getUserTimezone } from '@/lib/date-utils'
 import { MealFormSkeleton } from './meal-form-skeleton'
+import { v4 as uuidv4 } from 'uuid'
 
 const FOOD_TYPES = [
   { id: 'WET', label: 'Wet Food' },
@@ -40,9 +41,16 @@ function MealForm() {
     if (!selectedCat || !foodType || !weight) return
 
     try {
+      const requestId = uuidv4()
+      const timestamp = Date.now()
+
       const response = await fetch('/api/meals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-request-id': requestId,
+          'x-request-timestamp': timestamp.toString()
+        },
         body: JSON.stringify({
           catId: selectedCat,
           foodType,
