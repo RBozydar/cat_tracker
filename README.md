@@ -1,22 +1,48 @@
-A very simple app to track cat food consumption.
-Following features are implemented:
-- Add meals
-- View meals
-- View stats
+# Cat Tracker
 
-## Getting Started
+Feeding, calorie, and weight tracker for a two-person, three-cat household.
 
-First, run the development server:
+A FastAPI + SQLite backend owns the canonical data model and all calorie/report
+math; a Vite + React (shadcn/ui) SPA renders it. Both ship in a single container
+that serves the API and the built SPA. See
+[`FEATURE_PARITY.md`](FEATURE_PARITY.md) for the product spec and
+[`docs/plans/`](docs/plans/) for the rebuild plan.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+> Ground-up rebuild in progress. This is the Phase 0 skeleton (app shell +
+> `/api/health` only); domain features land in later phases.
+
+## Layout
+
+```
+backend/    FastAPI app, Alembic migrations, uv-managed Python 3.14
+frontend/   Vite + React 19 + TypeScript SPA (pnpm)
+Dockerfile  multi-stage: build the SPA, then run the API that serves it
 ```
 
+## Development
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Backend (from `backend/`):
+
+```bash
+uv sync
+uv run uvicorn app.main:app --reload --port 3000
+uv run pytest          # ruff / mypy / pytest also available via uv run
+```
+
+Frontend (from `frontend/`):
+
+```bash
+pnpm install
+pnpm dev               # Vite dev server; proxies /api to the backend on :3000
+pnpm test              # vitest
+pnpm build             # type-check + build to frontend/dist
+```
+
+## Container
+
+```bash
+docker compose up --build
+```
+
+Serves on port 3000 inside the container (mapped to `2137` by compose, behind
+Traefik). The entrypoint runs `alembic upgrade head` before starting uvicorn.

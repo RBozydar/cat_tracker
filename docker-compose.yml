@@ -11,8 +11,10 @@ services:
     ports:
       - "2137:3000"
     environment:
-      - DATABASE_URL=file:/data/dev.db
-      - LOG_LEVEL=info
+      # Fresh SQLite file on the existing named volume (old dev.db left untouched).
+      - DATABASE_URL=sqlite:////data/cat_tracker.db
+      # IANA timezone driving "today" bucketing and report boundaries.
+      - APP_TIMEZONE=Europe/Warsaw
     volumes:
       - cat_db:/data:rw
     healthcheck:
