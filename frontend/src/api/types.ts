@@ -26,6 +26,17 @@ export type WeightCreate = Schemas['WeightCreate']
 export type Meal = Schemas['MealResponse']
 export type MealCreate = Schemas['MealCreate']
 export type MealUpdate = Schemas['MealUpdate']
+export type MealSuggestion = Schemas['MealSuggestion']
 
 export type Settings = Schemas['SettingsResponse']
 export type SettingsUpdate = Schemas['SettingsUpdate']
+
+export type TargetSuggestion = Schemas['TargetSuggestionResponse']
+export type TargetSuggestionBasis = Schemas['TargetBasis']
+
+export type TodayReport = Schemas['TodayReport']
+export type CatTodayReport = Schemas['CatTodayReport']
+export type DefaultFoodGrams = Schemas['DefaultFoodGrams']
+
+export type ComparisonReport = Schemas['ComparisonReport']
+export type CatComparison = Schemas['CatComparison']

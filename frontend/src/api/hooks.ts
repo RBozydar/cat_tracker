@@ -9,13 +9,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   catsApi,
   foodsApi,
+  mealsApi,
+  reportsApi,
   settingsApi,
   targetSuggestionApi,
   weightsApi,
 } from './endpoints'
 import {
+  type ComparisonParams,
+  type MealListParams,
   invalidateAfterCatMutation,
   invalidateAfterFoodMutation,
+  invalidateAfterMealMutation,
   invalidateAfterSettingsMutation,
   invalidateAfterWeightMutation,
   queryKeys,
@@ -25,6 +30,8 @@ import type {
   CatUpdate,
   FoodCreate,
   FoodUpdate,
+  MealCreate,
+  MealUpdate,
   SettingsUpdate,
   WeightCreate,
 } from './types'
@@ -147,6 +154,72 @@ export function useTargetSuggestion(catId: number, enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.targetSuggestion(catId),
     queryFn: () => targetSuggestionApi.get(catId),
+    enabled,
+  })
+}
+
+// --- Meals -----------------------------------------------------------------
+
+/** Meal list. `catId` (camelCase, query-key shape) maps to the API's `cat_id`. */
+export function useMeals(params: MealListParams = {}) {
+  return useQuery({
+    queryKey: queryKeys.meals.list(params),
+    queryFn: () =>
+      mealsApi.list({
+        cat_id: params.catId,
+        start: params.start,
+        end: params.end,
+        limit: params.limit,
+      }),
+  })
+}
+
+/** Per-cat re-log chips. Fetched only for the selected cat (`enabled`). */
+export function useMealSuggestions(catId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.meals.suggestions(catId),
+    queryFn: () => mealsApi.suggestions(catId),
+    enabled,
+  })
+}
+
+export function useCreateMeal() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (body: MealCreate) => mealsApi.create(body),
+    onSuccess: () => invalidateAfterMealMutation(client),
+  })
+}
+
+export function useUpdateMeal() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: MealUpdate }) => mealsApi.update(id, body),
+    onSuccess: () => invalidateAfterMealMutation(client),
+  })
+}
+
+export function useDeleteMeal() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => mealsApi.remove(id),
+    onSuccess: () => invalidateAfterMealMutation(client),
+  })
+}
+
+// --- Reports ---------------------------------------------------------------
+
+export function useTodayReport() {
+  return useQuery({
+    queryKey: queryKeys.reports.today(),
+    queryFn: () => reportsApi.today(),
+  })
+}
+
+export function useComparison(params: ComparisonParams, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.reports.comparison(params),
+    queryFn: () => reportsApi.comparison(params),
     enabled,
   })
 }

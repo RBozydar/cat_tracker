@@ -147,6 +147,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/meals/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Meal Suggestions */
+        get: operations["meal_suggestions_api_meals_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/meals/{meal_id}": {
         parameters: {
             query?: never;
@@ -183,6 +200,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Today */
+        get: operations["today_api_reports_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/range": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Range Report */
+        get: operations["range_report_api_reports_range_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comparison */
+        get: operations["comparison_api_reports_comparison_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/target-suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Target Suggestion */
+        get: operations["target_suggestion_api_target_suggestion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -192,6 +277,19 @@ export interface components {
          * @enum {string}
          */
         CalorieBasis: "PER_100G" | "PER_PIECE";
+        /** CatComparison */
+        CatComparison: {
+            /** Cat Id */
+            cat_id: number;
+            /** Cat Name */
+            cat_name: string;
+            /** Avg Kcal Per Day */
+            avg_kcal_per_day: number;
+            /** Target Kcal */
+            target_kcal: number;
+            /** Adherence Pct */
+            adherence_pct: number;
+        };
         /** CatCreate */
         CatCreate: {
             /** Name */
@@ -226,6 +324,28 @@ export interface components {
             /** Meal Count */
             meal_count: number;
         };
+        /**
+         * CatTodayReport
+         * @description One cat's calorie standing for the current household-local day.
+         */
+        CatTodayReport: {
+            /** Cat Id */
+            cat_id: number;
+            /** Cat Name */
+            cat_name: string;
+            /** Target Kcal */
+            target_kcal: number;
+            /** Consumed Kcal */
+            consumed_kcal: number;
+            /** Remaining Kcal */
+            remaining_kcal: number;
+            /** Over */
+            over: boolean;
+            /** Grams Equivalents */
+            grams_equivalents: components["schemas"]["DefaultFoodGrams"][];
+            /** Portion Suggestions */
+            portion_suggestions: components["schemas"]["DefaultFoodGrams"][];
+        };
         /** CatUpdate */
         CatUpdate: {
             /** Name */
@@ -238,6 +358,54 @@ export interface components {
             default_wet_food_id?: number | null;
             /** Default Dry Food Id */
             default_dry_food_id?: number | null;
+        };
+        /** ComparisonReport */
+        ComparisonReport: {
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Timezone */
+            timezone: string;
+            /** Cats */
+            cats: components["schemas"]["CatComparison"][];
+        };
+        /**
+         * DailyKcalPoint
+         * @description Consumed kcal for one household-local day (zero-filled across the range).
+         */
+        DailyKcalPoint: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Kcal */
+            kcal: number;
+        };
+        /**
+         * DefaultFoodGrams
+         * @description A grams figure tied to one of a cat's default foods.
+         *
+         *     Used for both the remaining-kcal grams-equivalent and the per-meal portion
+         *     suggestion. Only produced for non-archived ``PER_100G`` default foods
+         *     (grams are meaningless for per-piece foods). ``food_type`` is ``WET`` or
+         *     ``DRY`` — it says which default the figure belongs to.
+         */
+        DefaultFoodGrams: {
+            /** Food Id */
+            food_id: number;
+            /** Food Name */
+            food_name: string;
+            food_type: components["schemas"]["FoodType"];
+            /** Grams */
+            grams: number;
         };
         /** FoodCreate */
         FoodCreate: {
@@ -337,6 +505,25 @@ export interface components {
              */
             fed_at: string;
         };
+        /**
+         * MealSuggestion
+         * @description A proposed one-tap meal to re-log.
+         *
+         *     ``kcal`` is derived at the food's *current* values (a proposal, not a
+         *     historical snapshot); logging it creates a fresh snapshot.
+         */
+        MealSuggestion: {
+            /** Food Id */
+            food_id: number;
+            /** Food Name */
+            food_name: string;
+            food_type: components["schemas"]["FoodType"];
+            /** Quantity */
+            quantity: number;
+            basis: components["schemas"]["CalorieBasis"];
+            /** Kcal */
+            kcal: number;
+        };
         /** MealUpdate */
         MealUpdate: {
             /** Cat Id */
@@ -347,6 +534,62 @@ export interface components {
             quantity?: number | null;
             /** Fed At */
             fed_at?: string | null;
+        };
+        /**
+         * PortionHistoryPoint
+         * @description A single grams-measured meal for the portion-history chart.
+         *
+         *     Only ``PER_100G`` ``WET``/``DRY`` meals appear here; treats and per-piece
+         *     meals are excluded (pieces are not grams) though they still count in all
+         *     kcal totals.
+         */
+        PortionHistoryPoint: {
+            /**
+             * Fed At
+             * Format: date-time
+             */
+            fed_at: string;
+            /** Grams */
+            grams: number;
+            food_type: components["schemas"]["FoodType"];
+        };
+        /**
+         * RangeReport
+         * @description Everything the History page needs for one cat in one round trip.
+         */
+        RangeReport: {
+            /** Cat Id */
+            cat_id: number;
+            /** Cat Name */
+            cat_name: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Timezone */
+            timezone: string;
+            /** Target Kcal */
+            target_kcal: number;
+            /** Daily Kcal */
+            daily_kcal: components["schemas"]["DailyKcalPoint"][];
+            /** Avg Kcal Per Day */
+            avg_kcal_per_day: number;
+            /** Trend Pct */
+            trend_pct: number | null;
+            /** Timing Pattern */
+            timing_pattern: number[][];
+            /** Portion History */
+            portion_history: components["schemas"]["PortionHistoryPoint"][];
+            /** Weight Series */
+            weight_series: components["schemas"]["WeightPoint"][];
+            /** Goal Weight Kg */
+            goal_weight_kg: number | null;
         };
         /** SettingsResponse */
         SettingsResponse: {
@@ -365,6 +608,48 @@ export interface components {
             portion_suggestions_enabled: boolean;
             /** Meals Per Day */
             meals_per_day: number;
+        };
+        /**
+         * TargetBasis
+         * @description Which weight the RER is computed from.
+         * @enum {string}
+         */
+        TargetBasis: "GOAL_WEIGHT" | "CURRENT_WEIGHT";
+        /**
+         * TargetSuggestionResponse
+         * @description RER/MER breakdown for the calculator dialog (always a suggestion).
+         *
+         *     ``rer_kcal = 70 × basis_weight ** 0.75`` where the basis weight is the goal
+         *     weight (factor 0.8, weight loss) when a goal is set, otherwise the current
+         *     weight (factor 1.2, neutered-adult maintenance).
+         *     ``suggested_target_kcal = rer_kcal × factor``.
+         */
+        TargetSuggestionResponse: {
+            /** Cat Id */
+            cat_id: number;
+            /** Current Weight Kg */
+            current_weight_kg: number | null;
+            /** Goal Weight Kg */
+            goal_weight_kg: number | null;
+            /** Rer Kcal */
+            rer_kcal: number;
+            /** Factor */
+            factor: number;
+            basis: components["schemas"]["TargetBasis"];
+            /** Suggested Target Kcal */
+            suggested_target_kcal: number;
+        };
+        /** TodayReport */
+        TodayReport: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Timezone */
+            timezone: string;
+            /** Cats */
+            cats: components["schemas"]["CatTodayReport"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -388,6 +673,16 @@ export interface components {
              * Format: date
              */
             measured_on: string;
+        };
+        /** WeightPoint */
+        WeightPoint: {
+            /**
+             * Measured On
+             * Format: date
+             */
+            measured_on: string;
+            /** Weight Kg */
+            weight_kg: number;
         };
         /** WeightResponse */
         WeightResponse: {
@@ -873,6 +1168,37 @@ export interface operations {
             };
         };
     };
+    meal_suggestions_api_meals_suggestions_get: {
+        parameters: {
+            query: {
+                cat_id: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealSuggestion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_meal_api_meals__meal_id__delete: {
         parameters: {
             query?: never;
@@ -977,6 +1303,122 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    today_api_reports_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodayReport"];
+                };
+            };
+        };
+    };
+    range_report_api_reports_range_get: {
+        parameters: {
+            query: {
+                cat_id: number;
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RangeReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comparison_api_reports_comparison_get: {
+        parameters: {
+            query: {
+                start: string;
+                end: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    target_suggestion_api_target_suggestion_get: {
+        parameters: {
+            query: {
+                cat_id: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TargetSuggestionResponse"];
                 };
             };
             /** @description Validation Error */

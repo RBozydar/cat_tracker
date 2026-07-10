@@ -5,20 +5,23 @@
  * node smoke script or unit test as easily as from a query hook.
  */
 import { api, queryString } from './client'
-import type { TargetSuggestion } from './target-suggestion.types'
 import type {
   Cat,
   CatCreate,
   CatUpdate,
+  ComparisonReport,
   Food,
   FoodCreate,
   FoodDeleteResult,
   FoodUpdate,
   Meal,
   MealCreate,
+  MealSuggestion,
   MealUpdate,
   Settings,
   SettingsUpdate,
+  TargetSuggestion,
+  TodayReport,
   Weight,
   WeightCreate,
 } from './types'
@@ -53,6 +56,14 @@ export const mealsApi = {
   create: (body: MealCreate) => api.post<Meal>('/meals', body),
   update: (id: number, body: MealUpdate) => api.patch<Meal>(`/meals/${id}`, body),
   remove: (id: number) => api.delete<void>(`/meals/${id}`),
+  suggestions: (catId: number) =>
+    api.get<MealSuggestion[]>(`/meals/suggestions${queryString({ cat_id: catId })}`),
+}
+
+export const reportsApi = {
+  today: () => api.get<TodayReport>('/reports/today'),
+  comparison: (params: { start: string; end: string }) =>
+    api.get<ComparisonReport>(`/reports/comparison${queryString(params)}`),
 }
 
 export const settingsApi = {
@@ -60,7 +71,6 @@ export const settingsApi = {
   update: (body: SettingsUpdate) => api.put<Settings>('/settings', body),
 }
 
-// Hand-written until Phase 2 adds the endpoint to the OpenAPI schema.
 export const targetSuggestionApi = {
   get: (catId: number) =>
     api.get<TargetSuggestion>(`/target-suggestion${queryString({ cat_id: catId })}`),
