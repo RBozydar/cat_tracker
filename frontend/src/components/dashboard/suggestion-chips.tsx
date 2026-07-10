@@ -65,10 +65,12 @@ export function SuggestionChips({ cat }: { cat: Cat }) {
             key={`${suggestion.food_id}-${suggestion.quantity}-${index}`}
             type="button"
             variant="outline"
-            className="h-11"
+            className="h-11 max-w-full"
             onClick={() => setPending(suggestion)}
           >
-            {suggestionLabel(suggestion)} · {formatKcal(suggestion.kcal)}
+            <span className="truncate">
+              {suggestionLabel(suggestion)} · {formatKcal(suggestion.kcal)}
+            </span>
           </Button>
         ))}
       </div>
