@@ -143,7 +143,7 @@ Design for a handful of cats (~3), not N: cat selection is a single row of butto
 - `settings`
 - `reports/today`
 - `reports/range`
-- `reports/cat-comparison`
+- `reports/comparison`
 - `target-suggestion` (calculator)
 - `health` (docker healthcheck)
 
