@@ -2,6 +2,14 @@ from logging.config import fileConfig
 
 from alembic import context
 from app.config import get_settings
+from app.db import Base
+from app.models import (  # noqa: F401 — imported so all tables register on Base.metadata
+    Cat,
+    Food,
+    HouseholdSettings,
+    Meal,
+    WeightEntry,
+)
 from sqlalchemy import engine_from_config, pool
 
 # Alembic Config object, providing access to values in alembic.ini.
@@ -14,9 +22,7 @@ config.set_main_option("sqlalchemy.url", get_settings().database_url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# No models yet (Phase 0 baseline). Phase 1 sets this to the models' metadata
-# to enable autogenerate.
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
