@@ -1,13 +1,26 @@
+import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
+import { createQueryClient } from '@/api/query-client'
+import { installFetchMock } from '@/test/mock-api'
 import App from './App'
 
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
 test('renders the dashboard page inside the app shell', () => {
+  // The dashboard now reads live data, so it needs the query provider (supplied
+  // by main.tsx in the real app) and a stub for its first request.
+  installFetchMock([{ method: 'GET', path: '/api/cats', body: [] }])
+
   render(
-    <MemoryRouter initialEntries={['/']}>
-      <App />
-    </MemoryRouter>,
+    <QueryClientProvider client={createQueryClient()}>
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 
   expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument()
