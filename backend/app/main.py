@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
-from app.routers import cats, foods, health, meals
+from app.routers import cats, foods, health, meals, reports, target
 from app.routers import settings as settings_router
 
 
@@ -25,6 +25,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(foods.router, prefix="/api")
     app.include_router(meals.router, prefix="/api")
     app.include_router(settings_router.router, prefix="/api")
+    app.include_router(reports.router, prefix="/api")
+    app.include_router(target.router, prefix="/api")
 
     _register_api_not_found(app)
     _mount_spa(app, settings.frontend_dist)

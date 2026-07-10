@@ -18,9 +18,10 @@ from sqlalchemy.orm import Session, joinedload
 from app.config import get_settings
 from app.db import SessionDep
 from app.models import Cat, Food, Meal
-from app.schemas import MealCreate, MealResponse, MealUpdate
+from app.schemas import MealCreate, MealResponse, MealSuggestion, MealUpdate
 from app.services.calories import derive_kcal
 from app.services.settings import get_or_create_settings
+from app.services.suggestions import build_meal_suggestions
 from app.services.timezones import local_day_bounds, resolve_timezone
 
 router = APIRouter(tags=["meals"])
@@ -91,6 +92,19 @@ def list_meals(
 
     meals = session.scalars(stmt).all()
     return [_serialize(meal) for meal in meals]
+
+
+# Declared before the ``/meals/{meal_id}`` routes so the literal ``suggestions``
+# path is never captured as a meal id.
+@router.get("/meals/suggestions")
+def meal_suggestions(session: SessionDep, cat_id: int) -> list[MealSuggestion]:
+    cat = session.get(Cat, cat_id)
+    if cat is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Cat {cat_id} not found")
+    settings = get_or_create_settings(session, get_settings().app_timezone)
+    suggestions = build_meal_suggestions(session, cat, settings.meals_per_day)
+    session.commit()
+    return suggestions
 
 
 @router.post("/meals", status_code=status.HTTP_201_CREATED)

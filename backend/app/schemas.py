@@ -7,6 +7,7 @@ apply them with ``model_dump(exclude_unset=True)``.
 """
 
 from datetime import date, datetime
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -154,3 +155,159 @@ class SettingsUpdate(BaseModel):
     timezone: NonEmptyStr
     portion_suggestions_enabled: bool
     meals_per_day: Annotated[int, Field(ge=1)]
+
+
+# --- Reports: today --------------------------------------------------------
+
+
+class DefaultFoodGrams(BaseModel):
+    """A grams figure tied to one of a cat's default foods.
+
+    Used for both the remaining-kcal grams-equivalent and the per-meal portion
+    suggestion. Only produced for non-archived ``PER_100G`` default foods
+    (grams are meaningless for per-piece foods). ``food_type`` is ``WET`` or
+    ``DRY`` — it says which default the figure belongs to.
+    """
+
+    food_id: int
+    food_name: str
+    food_type: FoodType
+    grams: float
+
+
+class CatTodayReport(BaseModel):
+    """One cat's calorie standing for the current household-local day."""
+
+    cat_id: int
+    cat_name: str
+    target_kcal: float
+    consumed_kcal: float
+    # target − consumed; negative when the cat is over target.
+    remaining_kcal: float
+    over: bool
+    # Grams of each default food equal to ``max(remaining, 0)`` kcal (clamped).
+    grams_equivalents: list[DefaultFoodGrams]
+    # Per-meal portion in grams; empty unless portion suggestions are enabled.
+    portion_suggestions: list[DefaultFoodGrams]
+
+
+class TodayReport(BaseModel):
+    # The household-local calendar day these figures cover.
+    date: date
+    timezone: str
+    cats: list[CatTodayReport]
+
+
+# --- Reports: range --------------------------------------------------------
+
+
+class DailyKcalPoint(BaseModel):
+    """Consumed kcal for one household-local day (zero-filled across the range)."""
+
+    date: date
+    kcal: float
+
+
+class PortionHistoryPoint(BaseModel):
+    """A single grams-measured meal for the portion-history chart.
+
+    Only ``PER_100G`` ``WET``/``DRY`` meals appear here; treats and per-piece
+    meals are excluded (pieces are not grams) though they still count in all
+    kcal totals.
+    """
+
+    fed_at: datetime
+    grams: float
+    food_type: FoodType
+
+
+class WeightPoint(BaseModel):
+    measured_on: date
+    weight_kg: float
+
+
+class RangeReport(BaseModel):
+    """Everything the History page needs for one cat in one round trip."""
+
+    cat_id: int
+    cat_name: str
+    start: date
+    end: date
+    timezone: str
+    target_kcal: float
+    daily_kcal: list[DailyKcalPoint]
+    avg_kcal_per_day: float
+    # Percent change of this window's average vs the immediately preceding
+    # window of equal length; null when that previous window has no meals.
+    trend_pct: float | None
+    # 7×24 meal-count matrix indexed [weekday][hour]; weekday 0 = Monday
+    # (Python ``date.weekday()``), hour 0–23 in household-local time.
+    timing_pattern: list[list[int]]
+    portion_history: list[PortionHistoryPoint]
+    weight_series: list[WeightPoint]
+    goal_weight_kg: float | None
+
+
+# --- Reports: comparison ---------------------------------------------------
+
+
+class CatComparison(BaseModel):
+    cat_id: int
+    cat_name: str
+    avg_kcal_per_day: float
+    target_kcal: float
+    # avg_kcal_per_day / target_kcal × 100; exceeds 100 when over target.
+    adherence_pct: float
+
+
+class ComparisonReport(BaseModel):
+    start: date
+    end: date
+    timezone: str
+    cats: list[CatComparison]
+
+
+# --- Target-calorie calculator ---------------------------------------------
+
+
+class TargetBasis(StrEnum):
+    """Which weight the RER is computed from."""
+
+    GOAL_WEIGHT = "GOAL_WEIGHT"
+    CURRENT_WEIGHT = "CURRENT_WEIGHT"
+
+
+class TargetSuggestionResponse(BaseModel):
+    """RER/MER breakdown for the calculator dialog (always a suggestion).
+
+    ``rer_kcal = 70 × basis_weight ** 0.75`` where the basis weight is the goal
+    weight (factor 0.8, weight loss) when a goal is set, otherwise the current
+    weight (factor 1.2, neutered-adult maintenance).
+    ``suggested_target_kcal = rer_kcal × factor``.
+    """
+
+    cat_id: int
+    current_weight_kg: float | None
+    goal_weight_kg: float | None
+    rer_kcal: float
+    factor: float
+    basis: TargetBasis
+    suggested_target_kcal: float
+
+
+# --- Fast re-log suggestions -----------------------------------------------
+
+
+class MealSuggestion(BaseModel):
+    """A proposed one-tap meal to re-log.
+
+    ``kcal`` is derived at the food's *current* values (a proposal, not a
+    historical snapshot); logging it creates a fresh snapshot.
+    """
+
+    food_id: int
+    food_name: str
+    food_type: FoodType
+    quantity: float
+    basis: CalorieBasis
+    kcal: float
