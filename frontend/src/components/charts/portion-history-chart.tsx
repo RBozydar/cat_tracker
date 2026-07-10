@@ -15,7 +15,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
-import { formatDayTick, formatInstant, tickInterval } from './chart-utils'
+import { formatInstant, tickInterval } from './chart-utils'
 
 const config = {
   wet: { label: 'Wet', color: 'var(--chart-1)' },
@@ -55,7 +55,9 @@ export function PortionHistoryChart({ history }: PortionHistoryChartProps) {
           axisLine={false}
           tickMargin={8}
           interval={tickInterval(new Set(history.map((point) => point.fed_at.slice(0, 10))).size)}
-          tickFormatter={(value: number) => formatDayTick(new Date(value).toISOString().slice(0, 10))}
+          tickFormatter={(value: number) =>
+            new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+          }
         />
         <YAxis
           type="number"
