@@ -151,3 +151,20 @@ test('manual form logs a treat by piece count', async () => {
   expect(post.body).toEqual({ cat_id: 1, food_id: 12, quantity: 2 })
   expect(await screen.findByText('Logged 2 pieces Dental Stick for Misza')).toBeInTheDocument()
 })
+
+test('surfaces a failed food-library request instead of claiming the library is empty', async () => {
+  installFetchMock([
+    { method: 'GET', path: '/api/cats', body: cats },
+    { method: 'GET', path: '/api/foods', status: 400, body: { detail: 'Foods unavailable' } },
+    { method: 'GET', path: '/api/meals/suggestions', body: [] },
+  ])
+
+  renderWithProviders(<QuickLogCard />)
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Misza' }))
+
+  expect(await screen.findByText('Foods unavailable')).toBeInTheDocument()
+  // Not the empty-library setup message — logging is blocked by a request
+  // failure, not because the library is genuinely empty.
+  expect(screen.queryByText(/no foods yet/i)).not.toBeInTheDocument()
+})

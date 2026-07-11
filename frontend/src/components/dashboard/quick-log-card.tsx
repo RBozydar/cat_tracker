@@ -75,7 +75,16 @@ export function QuickLogCard() {
           <>
             <CatChipRow cats={cats.data} selectedId={selectedCatId} onSelect={setSelectedCatId} />
             {selectedCat ? (
-              <CatQuickLog key={selectedCat.id} cat={selectedCat} foods={foods.data ?? []} />
+              // A failed/pending foods query is not "no foods" — collapsing it to
+              // [] would render the empty-library setup message and hide that
+              // logging is actually blocked by a request problem.
+              foods.isError ? (
+                <p className="border-t pt-4 text-sm text-destructive">{foods.error.message}</p>
+              ) : foods.isPending ? (
+                <p className="border-t pt-4 text-sm text-muted-foreground">Loading foods…</p>
+              ) : (
+                <CatQuickLog key={selectedCat.id} cat={selectedCat} foods={foods.data} />
+              )
             ) : (
               <p className="text-sm text-muted-foreground">Pick a cat to log a meal.</p>
             )}
