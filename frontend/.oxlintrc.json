@@ -1,8 +1,41 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "warn"
+  },
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    // React 19 + tsconfig "jsx": "react-jsx" uses the automatic JSX runtime,
+    // so `React` is never in scope by design; this classic-runtime rule is a
+    // false positive on every .tsx file in this project.
+    "react/react-in-jsx-scope": "off",
+    // `!= null` / `== null` deliberately matches both null and undefined in
+    // one check (a standard, intentional idiom used throughout this
+    // codebase); tightening it to `!==`/`===` would change behavior, not fix
+    // a bug.
+    "eqeqeq": ["warn", "always", { "null": "ignore" }],
+    // react-day-picker's `components` overrides and Recharts' tooltip
+    // `formatter` are render-prop APIs the libraries expect literal function
+    // props for; they're stateless renderers, not components whose identity
+    // changing across renders would cause remount/state-loss bugs.
+    "react/no-unstable-nested-components": ["error", { "allowAsProps": true }]
+  },
+  "overrides": [
+    {
+      // Unmodified shadcn/ui generated boilerplate: each react-day-picker
+      // `components` override destructures its own `className`/`props` from
+      // that callback's own arguments, which incidentally share names with
+      // the outer `Calendar` component's props — two unrelated APIs, not a
+      // real shadowing bug. Renaming would just make future `shadcn add`
+      // regenerations diff noisily forever.
+      "files": ["src/components/ui/calendar.tsx"],
+      "rules": {
+        "no-shadow": "off"
+      }
+    }
+  ]
 }
