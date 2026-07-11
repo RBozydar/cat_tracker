@@ -40,3 +40,8 @@ export type DefaultFoodGrams = Schemas['DefaultFoodGrams']
 
 export type ComparisonReport = Schemas['ComparisonReport']
 export type CatComparison = Schemas['CatComparison']
+
+export type RangeReport = Schemas['RangeReport']
+export type DailyKcalPoint = Schemas['DailyKcalPoint']
+export type PortionHistoryPoint = Schemas['PortionHistoryPoint']
+export type WeightPoint = Schemas['WeightPoint']
