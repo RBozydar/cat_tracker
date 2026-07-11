@@ -13,27 +13,29 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { parsePositiveNumber, todayLocalISO } from '@/lib/format'
+import { parsePositiveNumber, todayInHouseholdTz } from '@/lib/format'
 
 interface WeighInDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   cat: Cat
+  /** Household timezone — weigh-in dates are household-local, like history ranges. */
+  timezone: string
 }
 
-export function WeighInDialog({ open, onOpenChange, cat }: WeighInDialogProps) {
+export function WeighInDialog({ open, onOpenChange, cat, timezone }: WeighInDialogProps) {
   const upsertWeight = useUpsertWeight()
 
   const [weight, setWeight] = useState('')
-  const [measuredOn, setMeasuredOn] = useState(todayLocalISO)
+  const [measuredOn, setMeasuredOn] = useState(() => todayInHouseholdTz(timezone))
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setWeight('')
-    setMeasuredOn(todayLocalISO())
+    setMeasuredOn(todayInHouseholdTz(timezone))
     setError(null)
-  }, [open])
+  }, [open, timezone])
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()

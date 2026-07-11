@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { kcalYDomain, timeTicks, weightYDomain } from './chart-utils'
+import { formatInstant, kcalYDomain, timeTicks, weightYDomain } from './chart-utils'
 
 test('kcalYDomain keeps the target line in view when every day is below target', () => {
   // Seed-window case that hid the target: data peaks ~160, target 200.
@@ -60,4 +60,13 @@ test('timeTicks returns evenly spaced, in-range ticks and thins to the cap', () 
 test('timeTicks handles empty and single-point inputs', () => {
   expect(timeTicks([])).toEqual([])
   expect(timeTicks([1234])).toEqual([1234])
+})
+
+test('formatInstant renders the given IANA zone, not the system/browser zone', () => {
+  // 23:15 UTC is 00:15 the next day in Europe/Warsaw (UTC+2 in July) but
+  // still 15:15 the same day in Pacific/Honolulu (UTC-10) — a portion tooltip
+  // must land on the household's day, not whatever zone the test runner uses.
+  const iso = '2026-07-10T23:15:00Z'
+  expect(formatInstant(iso, 'Europe/Warsaw')).toBe('Jul 11, 1:15 AM')
+  expect(formatInstant(iso, 'Pacific/Honolulu')).toBe('Jul 10, 1:15 PM')
 })

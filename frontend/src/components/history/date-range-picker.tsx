@@ -17,14 +17,17 @@ import {
   parseLocalISO,
   presetRange,
   rangeFromCalendarSelection,
-  startOfLocalDay,
   type DateRange,
 } from './date-range'
 
 interface DateRangePickerProps {
   value: DateRange
   onChange: (range: DateRange) => void
-  /** Household-local "today" (`YYYY-MM-DD`) that presets are computed from. */
+  /**
+   * Household-local "today" (`YYYY-MM-DD`) — presets are computed from it and
+   * it bounds the custom calendar's disabled-future days. Never the browser's
+   * own date: the viewer and household timezones can differ.
+   */
   today: string
 }
 
@@ -68,7 +71,7 @@ export function DateRangePicker({ value, onChange, today }: DateRangePickerProps
             defaultMonth={parseLocalISO(value.start)}
             selected={{ from: parseLocalISO(value.start), to: parseLocalISO(value.end) }}
             onSelect={handleCalendarSelect}
-            disabled={{ after: startOfLocalDay() }}
+            disabled={{ after: parseLocalISO(today) }}
             numberOfMonths={2}
             className="p-0"
           />

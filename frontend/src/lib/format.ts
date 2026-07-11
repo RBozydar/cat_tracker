@@ -36,13 +36,6 @@ export function parseOptionalPositiveNumber(raw: string): number | null | undefi
   return parsePositiveNumber(raw)
 }
 
-/** Today's date in the browser's local calendar, as YYYY-MM-DD (weigh-in default). */
-export function todayLocalISO(): string {
-  const now = new Date()
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-  return now.toISOString().slice(0, 10)
-}
-
 /* --- Household-timezone time handling -------------------------------------
  *
  * Meals store a tz-aware UTC instant (`fed_at`); the household timezone lives in
@@ -122,6 +115,17 @@ export function formatMealTime(iso: string, timeZone: string): string {
   return zonedWallClock(iso, timeZone).time
 }
 
+/**
+ * Today's calendar date (`YYYY-MM-DD`) in the household timezone — the
+ * household-tz counterpart of a browser-local "today". Use this wherever a
+ * default or boundary depends on the household's current day (history
+ * ranges, weigh-in dates); never fall back to the browser's own date, since
+ * the viewer and household timezones can differ.
+ */
+export function todayInHouseholdTz(timeZone: string): string {
+  return zonedWallClock(new Date().toISOString(), timeZone).date
+}
+
 /** Shift a `YYYY-MM-DD` calendar date by `days` (calendar arithmetic, tz-free). */
 export function shiftISODate(date: string, days: number): string {
   const shifted = new Date(`${date}T00:00:00Z`)
@@ -135,7 +139,7 @@ export function shiftISODate(date: string, days: number): string {
  */
 export function formatMealDay(iso: string, timeZone: string): string {
   const mealDay = zonedWallClock(iso, timeZone).date
-  const today = zonedWallClock(new Date().toISOString(), timeZone).date
+  const today = todayInHouseholdTz(timeZone)
   if (mealDay === today) return 'Today'
   if (mealDay === shiftISODate(today, -1)) return 'Yesterday'
   return new Intl.DateTimeFormat('en-GB', {

@@ -9,10 +9,12 @@ import { ChartEmpty, ChartSkeleton, SectionCard } from './section-card'
 
 interface ComparisonSectionProps {
   range: DateRange
+  /** Gate the fetch until the household timezone is known (default: fire immediately). */
+  enabled?: boolean
 }
 
-export function ComparisonSection({ range }: ComparisonSectionProps) {
-  const comparison = useComparisonReport({ start: range.start, end: range.end })
+export function ComparisonSection({ range, enabled = true }: ComparisonSectionProps) {
+  const comparison = useComparisonReport({ start: range.start, end: range.end }, enabled)
 
   return (
     <SectionCard

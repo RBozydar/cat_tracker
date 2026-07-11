@@ -78,7 +78,7 @@ export function CatHistory({ cat, range, enabled }: CatHistoryProps) {
           description="Grams per wet and dry meal over time. Treats are excluded."
         >
           {data.portion_history.length > 0 ? (
-            <PortionHistoryChart history={data.portion_history} />
+            <PortionHistoryChart history={data.portion_history} timezone={data.timezone} />
           ) : (
             <ChartEmpty>No wet or dry portions logged in this range.</ChartEmpty>
           )}
@@ -106,7 +106,12 @@ export function CatHistory({ cat, range, enabled }: CatHistoryProps) {
         </SectionCard>
       </div>
 
-      <WeighInDialog open={weighOpen} onOpenChange={setWeighOpen} cat={cat} />
+      <WeighInDialog
+        open={weighOpen}
+        onOpenChange={setWeighOpen}
+        cat={cat}
+        timezone={data.timezone}
+      />
     </div>
   )
 }

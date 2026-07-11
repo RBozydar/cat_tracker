@@ -36,9 +36,11 @@ function toPoints(history: PortionHistoryPoint[], type: 'WET' | 'DRY'): Point[] 
 
 interface PortionHistoryChartProps {
   history: PortionHistoryPoint[]
+  /** Household timezone — instants render as household wall-clock, matching the range filters and timing heatmap. */
+  timezone: string
 }
 
-export function PortionHistoryChart({ history }: PortionHistoryChartProps) {
+export function PortionHistoryChart({ history, timezone }: PortionHistoryChartProps) {
   const wet = toPoints(history, 'WET')
   const dry = toPoints(history, 'DRY')
   const ticks = timeTicks(history.map((point) => Date.parse(point.fed_at)))
@@ -58,7 +60,11 @@ export function PortionHistoryChart({ history }: PortionHistoryChartProps) {
           tickMargin={8}
           minTickGap={24}
           tickFormatter={(value: number) =>
-            new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+            new Date(value).toLocaleDateString(undefined, {
+              timeZone: timezone,
+              month: 'short',
+              day: 'numeric',
+            })
           }
         />
         <YAxis
@@ -79,7 +85,7 @@ export function PortionHistoryChart({ history }: PortionHistoryChartProps) {
               formatter={(value, _name, item) => (
                 <span className="flex w-full items-center justify-between gap-3 text-foreground">
                   <span className="text-muted-foreground">
-                    {formatInstant(String(item.payload?.fed_at))}
+                    {formatInstant(String(item.payload?.fed_at), timezone)}
                   </span>
                   <span className="font-mono tabular-nums">{Math.round(Number(value))} g</span>
                 </span>

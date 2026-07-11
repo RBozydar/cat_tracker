@@ -16,9 +16,10 @@ export function formatDayFull(iso: string): string {
   })
 }
 
-/** UTC ISO instant → local date+time label for the portion tooltip. */
-export function formatInstant(iso: string): string {
+/** UTC ISO instant → date+time label in `timeZone` for the portion tooltip. */
+export function formatInstant(iso: string, timeZone: string): string {
   return new Date(iso).toLocaleString(undefined, {
+    timeZone,
     month: 'short',
     day: 'numeric',
     hour: 'numeric',

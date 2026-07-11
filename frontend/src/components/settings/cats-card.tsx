@@ -1,6 +1,6 @@
 import { Calculator, Pencil, Plus, Scale, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useCats, useFoods } from '@/api/hooks'
+import { useCats, useFoods, useSettings } from '@/api/hooks'
 import type { Cat } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +32,10 @@ export function CatsCard() {
   // include_archived=false: an archived food can linger as a default reference
   // only transiently; names resolve from the active library.
   const foods = useFoods(false)
+  // Weigh-in dates are household-local; the settings query is shared/cached
+  // with HouseholdCard, so this rarely observes the pending window in practice.
+  const settings = useSettings()
+  const timezone = settings.data?.timezone ?? 'UTC'
 
   const [createOpen, setCreateOpen] = useState(false)
   const [active, setActive] = useState<{ cat: Cat; dialog: RowDialog } | undefined>(undefined)
@@ -165,6 +169,7 @@ export function CatsCard() {
             open={active.dialog === 'weigh'}
             onOpenChange={rowDialogOpenChange}
             cat={active.cat}
+            timezone={timezone}
           />
           <TargetCalculatorDialog
             open={active.dialog === 'calculator'}

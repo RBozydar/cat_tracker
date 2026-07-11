@@ -1,29 +1,59 @@
 /**
  * History / analysis page (desktop-first, renders sanely at 375 pt).
  *
- * A shared range (default: last 30 days, LOCAL) drives a per-cat tabbed view and
- * the multi-cat comparison. Each cat tab pulls ONE `reports/range` payload; only
- * the active tab is mounted, so exactly one range call is in flight per view.
+ * A shared range (default: last 30 days, household-local) drives a per-cat
+ * tabbed view and the multi-cat comparison. Each cat tab pulls ONE
+ * `reports/range` payload; only the active tab is mounted, so exactly one
+ * range call is in flight per view.
  */
 import { useState } from 'react'
 import { useCats, useSettings } from '@/api/hooks'
 import { ComparisonSection } from '@/components/history/comparison-section'
 import { CatHistory } from '@/components/history/cat-history'
-import { DEFAULT_PRESET, presetRange, type DateRange } from '@/components/history/date-range'
+import {
+  DEFAULT_PRESET,
+  matchingPreset,
+  presetRange,
+  type DateRange,
+  type RangePreset,
+} from '@/components/history/date-range'
 import { DateRangePicker } from '@/components/history/date-range-picker'
 import { ChartSkeleton } from '@/components/history/section-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { zonedWallClock } from '@/lib/format'
+import { todayInHouseholdTz } from '@/lib/format'
+
+/**
+ * The user's choice of range, not the resolved dates. A tracked preset is
+ * recomputed from "today" on every render, so it self-corrects the moment
+ * the household timezone resolves instead of freezing a UTC-based guess; a
+ * custom range is stored verbatim since the user picked those exact dates.
+ */
+type RangeSelection = { kind: 'preset'; days: RangePreset } | { kind: 'custom'; range: DateRange }
 
 export default function HistoryPage() {
   const cats = useCats()
   const settings = useSettings()
   // Falls back to UTC until settings load, same as the weekly summary — the
   // API only understands household-local dates, never the viewer's browser tz.
+  // The RangeSelection below re-derives `range` from `today` every render, so
+  // this fallback self-corrects once the real timezone arrives rather than
+  // freezing a wrong default; report/comparison fetches are additionally
+  // gated on `settings.isSuccess` so they never fire against the guess.
   const timezone = settings.data?.timezone ?? 'UTC'
-  const today = zonedWallClock(new Date().toISOString(), timezone).date
-  const [range, setRange] = useState<DateRange>(() => presetRange(DEFAULT_PRESET, today))
+  const today = todayInHouseholdTz(timezone)
+
+  const [selection, setSelection] = useState<RangeSelection>({
+    kind: 'preset',
+    days: DEFAULT_PRESET,
+  })
+  const range = selection.kind === 'preset' ? presetRange(selection.days, today) : selection.range
+
+  function handleRangeChange(next: DateRange) {
+    const preset = matchingPreset(next, today)
+    setSelection(preset !== null ? { kind: 'preset', days: preset } : { kind: 'custom', range: next })
+  }
+
   const [selectedCatId, setSelectedCatId] = useState<string | undefined>(undefined)
 
   const firstCat = cats.data?.[0]
@@ -38,8 +68,18 @@ export default function HistoryPage() {
             Calorie trends, meal timing, portions, and weight over a date range.
           </p>
         </div>
-        <DateRangePicker value={range} onChange={setRange} today={today} />
+        <DateRangePicker value={range} onChange={handleRangeChange} today={today} />
       </div>
+
+      {settings.isError ? (
+        // Report/comparison fetches below stay gated on `settings.isSuccess` and
+        // would otherwise spin forever with no explanation.
+        <Card>
+          <CardContent className="py-4 text-sm text-destructive">
+            {settings.error.message}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {cats.isPending ? (
         <Card>
@@ -73,14 +113,14 @@ export default function HistoryPage() {
               <CatHistory
                 cat={cat}
                 range={range}
-                enabled={activeCatId === String(cat.id)}
+                enabled={activeCatId === String(cat.id) && settings.isSuccess}
               />
             </TabsContent>
           ))}
         </Tabs>
       )}
 
-      <ComparisonSection range={range} />
+      <ComparisonSection range={range} enabled={settings.isSuccess} />
     </section>
   )
 }

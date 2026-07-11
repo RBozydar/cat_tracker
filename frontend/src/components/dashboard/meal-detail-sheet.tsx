@@ -9,7 +9,7 @@
  * The PATCH re-snapshots kcal only when food or quantity changed, so a
  * date/time-only edit keeps the original calorie snapshot.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCats, useDeleteMeal, useFoods, useUpdateMeal } from '@/api/hooks'
 import type { Meal } from '@/api/types'
@@ -70,9 +70,26 @@ export function MealDetailSheet({ meal, timezone, onClose }: MealDetailSheetProp
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // `RecentMeals` seeds `timezone` from settings, falling back to UTC while
+  // that query is still pending; if it opens this sheet in that window, the
+  // date/time above were seeded wrong. Reinitialize once the real timezone
+  // (or a different meal via the `key={meal.id}` remount) arrives.
+  useEffect(() => {
+    const resolved = zonedWallClock(meal.fed_at, timezone)
+    setDate(resolved.date)
+    setTime(resolved.time)
+  }, [meal.fed_at, timezone])
+
   const foodOptions = foods.data ?? []
   const selectedFood = foodOptions.find((food) => String(food.id) === foodId)
-  const perPiece = selectedFood?.calorie_basis === 'PER_PIECE'
+  // `useFoods(false)` excludes archived foods, so a meal logged against a now-
+  // archived food resolves to no match here even though `foodId` still points
+  // at it (archived foods aren't selectable, so this can only be the meal's
+  // original food). Fall back to the meal's own snapshot basis rather than
+  // defaulting to grams for what may be a per-piece food.
+  const perPiece = selectedFood
+    ? selectedFood.calorie_basis === 'PER_PIECE'
+    : meal.basis === 'PER_PIECE'
 
   function handleSave(event: React.FormEvent) {
     event.preventDefault()

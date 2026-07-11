@@ -1,7 +1,10 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
+import { createQueryClient } from '@/api/query-client'
 import type { Cat, Food, Meal } from '@/api/types'
+import { Toaster } from '@/components/ui/sonner'
 import { installFetchMock } from '@/test/mock-api'
 import { renderWithProviders } from '@/test/render'
 import { MealDetailSheet } from './meal-detail-sheet'
@@ -87,4 +90,48 @@ test('delete asks for confirmation, then removes the meal', async () => {
     expect(del).toBeDefined()
   })
   await waitFor(() => expect(onClose).toHaveBeenCalled())
+})
+
+test('falls back to the meal snapshot basis when the live food is archived (excluded from useFoods(false))', async () => {
+  // The foods list omits food 10 entirely, simulating `useFoods(false)`
+  // excluding an archived food that this meal still references.
+  installFetchMock([
+    { method: 'GET', path: '/api/cats', body: cats },
+    { method: 'GET', path: '/api/foods', body: [] },
+  ])
+  const perPieceMeal: Meal = { ...meal, basis: 'PER_PIECE' }
+
+  renderWithProviders(
+    <MealDetailSheet meal={perPieceMeal} timezone="Europe/Warsaw" onClose={vi.fn()} />,
+  )
+
+  // Labeled and keyboarded for pieces (the meal's own snapshot basis), not
+  // grams — even though the live food list can't resolve `selectedFood`.
+  expect(await screen.findByLabelText('Pieces')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Grams')).not.toBeInTheDocument()
+})
+
+test('reinitializes date/time once the real household timezone arrives', async () => {
+  // 12:30 UTC on 2026-07-09 is 14:30 wall-clock in Europe/Warsaw (see `meal`).
+  installFetchMock([
+    { method: 'GET', path: '/api/cats', body: cats },
+    { method: 'GET', path: '/api/foods', body: foods },
+  ])
+  const queryClient = createQueryClient()
+  const renderWithTimezone = (timezone: string) => (
+    <QueryClientProvider client={queryClient}>
+      <MealDetailSheet meal={meal} timezone={timezone} onClose={vi.fn()} />
+      <Toaster />
+    </QueryClientProvider>
+  )
+
+  // Opened while settings is still pending: RecentMeals falls back to UTC.
+  const { rerender } = render(renderWithTimezone('UTC'))
+  const time = (await screen.findByLabelText('Time')) as HTMLInputElement
+  expect(time.value).toBe('12:30')
+
+  // Settings resolves with the real household timezone; the same open sheet
+  // must recompute, not keep the UTC-seeded value.
+  rerender(renderWithTimezone('Europe/Warsaw'))
+  await waitFor(() => expect(time.value).toBe('14:30'))
 })

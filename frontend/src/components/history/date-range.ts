@@ -3,11 +3,11 @@
  *
  * The backend interprets `start`/`end` as household-LOCAL calendar dates
  * (`YYYY-MM-DD`). Calendar-widget helpers below (`formatLocalISO`,
- * `parseLocalISO`, `startOfLocalDay`) work on the *browser's* local calendar
- * via the `Date(year, month, day)` constructor, which the engine normalises in
- * LOCAL time — so decrementing the day across a month boundary or a DST
- * transition still yields the correct calendar day. We deliberately never
- * touch `toISOString()` (UTC) to derive a local date: near midnight in a
+ * `parseLocalISO`) work on the *browser's* local calendar via the
+ * `Date(year, month, day)` constructor, which the engine normalises in LOCAL
+ * time — so decrementing the day across a month boundary or a DST transition
+ * still yields the correct calendar day. We deliberately never touch
+ * `toISOString()` (UTC) to derive a local date: near midnight in a
  * +offset timezone that would report the wrong day.
  *
  * `presetRange`/`matchingPreset` take "today" as an already-resolved
@@ -48,11 +48,6 @@ export function parseLocalISO(iso: string): Date {
     throw new Error(`Invalid ISO date: ${iso}`)
   }
   return new Date(year, month - 1, day)
-}
-
-/** Midnight today in the browser's local calendar. */
-export function startOfLocalDay(date: Date = new Date()): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 /**
