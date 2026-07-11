@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
 import { createQueryClient } from '@/api/query-client'
 import type { Cat } from '@/api/types'
@@ -52,4 +53,27 @@ test('re-defaults the date when the timezone changes while the dialog stays open
 
   rerender(renderWithTimezone('Europe/Warsaw'))
   expect(screen.getByLabelText('Date')).toHaveValue('2026-07-11')
+})
+
+test('an in-progress weight/date entry survives a timezone change (partner edits settings mid-entry)', async () => {
+  const queryClient = createQueryClient()
+  const renderWithTimezone = (timezone: string) => (
+    <QueryClientProvider client={queryClient}>
+      <WeighInDialog open onOpenChange={vi.fn()} cat={cat} timezone={timezone} />
+      <Toaster />
+    </QueryClientProvider>
+  )
+
+  const { rerender } = render(renderWithTimezone('UTC'))
+
+  await userEvent.type(screen.getByLabelText('Weight (kg)'), '4.2')
+  await userEvent.clear(screen.getByLabelText('Date'))
+  await userEvent.type(screen.getByLabelText('Date'), '2026-07-05')
+  expect(screen.getByLabelText('Date')).toHaveValue('2026-07-05')
+
+  // The household timezone changes mid-entry (e.g. the partner just saved a
+  // different one) — the in-progress date must not reset to today's default.
+  rerender(renderWithTimezone('Europe/Warsaw'))
+  expect(screen.getByLabelText('Date')).toHaveValue('2026-07-05')
+  expect(screen.getByLabelText('Weight (kg)')).toHaveValue(4.2)
 })

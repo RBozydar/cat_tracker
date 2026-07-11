@@ -29,13 +29,30 @@ export function WeighInDialog({ open, onOpenChange, cat, timezone }: WeighInDial
   const [weight, setWeight] = useState('')
   const [measuredOn, setMeasuredOn] = useState(() => todayInHouseholdTz(timezone))
   const [error, setError] = useState<string | null>(null)
+  // Tracks unsaved edits so a background refetch that changes the household
+  // timezone mid-edit (see below) can't silently reset an in-progress entry.
+  const [dirty, setDirty] = useState(false)
 
+  // Reset the form fresh every time the dialog opens.
   useEffect(() => {
     if (!open) return
     setWeight('')
     setMeasuredOn(todayInHouseholdTz(timezone))
     setError(null)
-  }, [open, timezone])
+    setDirty(false)
+    // `timezone` is deliberately excluded: it's handled by the effect below so
+    // a mid-edit timezone change doesn't also blank out the weight field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  // Re-derive the default date from the household timezone, but only while
+  // the form is still untouched — `timezone` comes from a live query, and a
+  // background refetch (e.g. the partner changing it) shouldn't clobber an
+  // in-progress weigh-in.
+  useEffect(() => {
+    if (!open || dirty) return
+    setMeasuredOn(todayInHouseholdTz(timezone))
+  }, [open, timezone, dirty])
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -81,7 +98,10 @@ export function WeighInDialog({ open, onOpenChange, cat, timezone }: WeighInDial
               min="0"
               step="any"
               value={weight}
-              onChange={(event) => setWeight(event.target.value)}
+              onChange={(event) => {
+                setWeight(event.target.value)
+                setDirty(true)
+              }}
               autoFocus
               required
             />
@@ -92,7 +112,10 @@ export function WeighInDialog({ open, onOpenChange, cat, timezone }: WeighInDial
               id="weigh-date"
               type="date"
               value={measuredOn}
-              onChange={(event) => setMeasuredOn(event.target.value)}
+              onChange={(event) => {
+                setMeasuredOn(event.target.value)
+                setDirty(true)
+              }}
               required
             />
           </div>
