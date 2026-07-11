@@ -74,11 +74,19 @@
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    /*
+     * Chart series hues — light mode. A dataviz-validated categorical set
+     * (blue, aqua, orange, green, violet), stepped for the light chart surface
+     * and re-stepped under the dark media query below. Charts reference these as
+     * `var(--chart-N)` only (no hardcoded hex in component code), so both themes
+     * follow the OS preference automatically. Verified with the dataviz palette
+     * validator (adjacent-pair CVD + contrast) in both modes.
+     */
+    --chart-1: #2a78d6;
+    --chart-2: #1baf7a;
+    --chart-3: #eb6834;
+    --chart-4: #008300;
+    --chart-5: #4a3aa7;
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
@@ -110,11 +118,12 @@
         --border: oklch(1 0 0 / 10%);
         --input: oklch(1 0 0 / 15%);
         --ring: oklch(0.556 0 0);
-        --chart-1: oklch(0.87 0 0);
-        --chart-2: oklch(0.556 0 0);
-        --chart-3: oklch(0.439 0 0);
-        --chart-4: oklch(0.371 0 0);
-        --chart-5: oklch(0.269 0 0);
+        /* Chart series hues — dark mode: same five hues re-stepped for the dark surface. */
+        --chart-1: #3987e5;
+        --chart-2: #199e70;
+        --chart-3: #d95926;
+        --chart-4: #008300;
+        --chart-5: #9085e9;
         --sidebar: oklch(0.205 0 0);
         --sidebar-foreground: oklch(0.985 0 0);
         --sidebar-primary: oklch(0.488 0.243 264.376);
