@@ -68,10 +68,15 @@ def _mount_spa(app: FastAPI, dist: Path) -> None:
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
+    dist_resolved = dist.resolve()
+
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa(full_path: str) -> FileResponse:
-        candidate = dist / full_path
-        if full_path and candidate.is_file():
+        # Resolve and require containment under dist_resolved before serving —
+        # full_path can carry "../" segments that would otherwise escape the
+        # SPA root (e.g. to the SQLite volume mounted alongside it).
+        candidate = (dist / full_path).resolve()
+        if full_path and candidate.is_relative_to(dist_resolved) and candidate.is_file():
             return FileResponse(candidate)
         return FileResponse(index)
 
