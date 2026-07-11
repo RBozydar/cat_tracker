@@ -40,9 +40,19 @@ function isValidationErrorArray(detail: unknown): detail is FastApiValidationErr
   )
 }
 
-/** Turn a FastAPI `detail` payload into a single readable sentence. */
+/**
+ * Turn a FastAPI `detail` payload into a single readable sentence. `detail`
+ * can also be raw response text here (see {@link parseBody}) — an upstream
+ * proxy's HTML error page or an empty body — which isn't a useful message on
+ * its own, so those fall back to the generic status sentence instead of
+ * dumping markup into the UI.
+ */
 function messageFromDetail(status: number, detail: unknown): string {
-  if (typeof detail === 'string') return detail
+  if (typeof detail === 'string') {
+    const trimmed = detail.trim()
+    if (!trimmed || trimmed.startsWith('<')) return `Request failed with status ${status}`
+    return trimmed.length > 200 ? `${trimmed.slice(0, 200)}…` : trimmed
+  }
   if (isValidationErrorArray(detail)) {
     const messages = detail.map((item) => {
       const field = item.loc.filter((part) => part !== 'body').join('.')
@@ -51,6 +61,25 @@ function messageFromDetail(status: number, detail: unknown): string {
     if (messages.length > 0) return messages.join('; ')
   }
   return `Request failed with status ${status}`
+}
+
+/**
+ * Parse a response body, tolerating non-JSON content: a proxy in front of the
+ * API (or FastAPI's own default error page) can return plain text or HTML
+ * instead of the `{ detail }` shape callers expect. Returns the raw text
+ * rather than throwing so a malformed body never masks the real HTTP failure
+ * with an unrelated `JSON.parse` `SyntaxError`.
+ */
+async function parseBody(response: Response): Promise<unknown> {
+  const text = await response.text()
+  if (!text) return undefined
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.includes('json')) return text
+  try {
+    return JSON.parse(text)
+  } catch {
+    return text
+  }
 }
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -65,8 +94,7 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
   // 204 No Content (delete cat / weight / meal) — nothing to parse.
   if (response.status === 204) return undefined as T
 
-  const text = await response.text()
-  const data: unknown = text ? JSON.parse(text) : undefined
+  const data = await parseBody(response)
 
   if (!response.ok) {
     const detail =
