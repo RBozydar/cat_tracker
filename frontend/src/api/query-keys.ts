@@ -63,10 +63,13 @@ export const queryKeys = {
 /**
  * Food create/update/delete. Archiving a food can clear cat defaults and always
  * changes the logging library, so cats and reports refresh alongside foods.
+ * Meals refresh too: recent-meal rows show the live food name, and re-log
+ * chips price against the food's current basis/kcal and must drop archived foods.
  */
 export function invalidateAfterFoodMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: queryKeys.foods.all })
   void client.invalidateQueries({ queryKey: queryKeys.cats.all })
+  void client.invalidateQueries({ queryKey: queryKeys.meals.all })
   void client.invalidateQueries({ queryKey: queryKeys.reports.all })
 }
 
@@ -92,8 +95,12 @@ export function invalidateAfterMealMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: queryKeys.reports.all })
 }
 
-/** Settings PUT: timezone shifts day buckets and the portion toggle changes suggestions. */
+/**
+ * Settings PUT: timezone shifts day buckets, the portion toggle and
+ * meals-per-day change re-log suggestions' default-food fallback.
+ */
 export function invalidateAfterSettingsMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: queryKeys.settings.all })
+  void client.invalidateQueries({ queryKey: queryKeys.meals.all })
   void client.invalidateQueries({ queryKey: queryKeys.reports.all })
 }
