@@ -29,14 +29,18 @@ export function HouseholdCard() {
   const [portionSuggestions, setPortionSuggestions] = useState(false)
   const [mealsPerDay, setMealsPerDay] = useState('2')
   const [error, setError] = useState<string | null>(null)
+  // Tracks unsaved edits so a background refetch (e.g. another device saving
+  // settings) can't silently overwrite what the user is mid-typing here.
+  const [dirty, setDirty] = useState(false)
 
-  // Seed the form once the settings arrive (and re-seed after refetches while untouched).
+  // Seed the form once the settings arrive, and re-seed after refetches only
+  // while the form is clean (untouched since the last load or save).
   useEffect(() => {
-    if (!settings.data) return
+    if (!settings.data || dirty) return
     setTimezone(settings.data.timezone)
     setPortionSuggestions(settings.data.portion_suggestions_enabled)
     setMealsPerDay(String(settings.data.meals_per_day))
-  }, [settings.data])
+  }, [settings.data, dirty])
 
   const timezones = useMemo(() => {
     const supported = Intl.supportedValuesOf('timeZone')
@@ -64,7 +68,10 @@ export function HouseholdCard() {
         meals_per_day: meals,
       },
       {
-        onSuccess: () => toast.success('Household settings saved'),
+        onSuccess: () => {
+          toast.success('Household settings saved')
+          setDirty(false)
+        },
         onError: (err) => setError(err.message),
       },
     )
@@ -92,7 +99,13 @@ export function HouseholdCard() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="household-timezone">Timezone</Label>
-              <Select value={timezone} onValueChange={setTimezone}>
+              <Select
+                value={timezone}
+                onValueChange={(value) => {
+                  setTimezone(value)
+                  setDirty(true)
+                }}
+              >
                 <SelectTrigger id="household-timezone" className="w-full sm:w-80">
                   <SelectValue placeholder="Pick a timezone" />
                 </SelectTrigger>
@@ -110,7 +123,10 @@ export function HouseholdCard() {
               <Switch
                 id="portion-suggestions"
                 checked={portionSuggestions}
-                onCheckedChange={setPortionSuggestions}
+                onCheckedChange={(checked) => {
+                  setPortionSuggestions(checked)
+                  setDirty(true)
+                }}
               />
               <Label htmlFor="portion-suggestions">Portion suggestions</Label>
             </div>
@@ -125,7 +141,10 @@ export function HouseholdCard() {
                 step="1"
                 className="w-24"
                 value={mealsPerDay}
-                onChange={(event) => setMealsPerDay(event.target.value)}
+                onChange={(event) => {
+                  setMealsPerDay(event.target.value)
+                  setDirty(true)
+                }}
                 required
               />
             </div>
