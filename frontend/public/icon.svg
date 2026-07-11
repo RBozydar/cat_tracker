@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Cat Tracker">
+  <!-- App icon: white cat-face silhouette on the app's primary charcoal.
+       Full-bleed square background so it survives maskable cropping; the cat is
+       kept within the central safe zone. -->
+  <rect width="512" height="512" fill="#171717"/>
+  <g fill="#fafafa">
+    <!-- Ears -->
+    <path d="M150 176 L118 78 L246 156 Z"/>
+    <path d="M362 176 L394 78 L266 156 Z"/>
+    <!-- Head + cheeks -->
+    <circle cx="256" cy="286" r="146"/>
+  </g>
+  <!-- Face cut-outs in the background colour -->
+  <g fill="#171717">
+    <ellipse cx="210" cy="276" rx="20" ry="28"/>
+    <ellipse cx="302" cy="276" rx="20" ry="28"/>
+    <path d="M256 318 L276 336 L256 354 L236 336 Z"/>
+  </g>
+</svg>
