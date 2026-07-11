@@ -157,3 +157,27 @@ def test_patch_changing_food_basis_without_quantity_is_rejected(client: TestClie
     response = client.patch(f"/api/meals/{meal['id']}", json={"food_id": treat["id"]})
     assert response.status_code == 400
     assert client.get("/api/meals").json()[0]["food_id"] == wet["id"]
+
+
+def test_patch_changing_food_basis_with_explicit_same_quantity_is_accepted(
+    client: TestClient,
+) -> None:
+    # The guard must key off *presence* of "quantity" in the payload, not
+    # whether its value differs from the meal's current quantity — resending
+    # the same number is still an explicit choice, not an omission.
+    wet = create_food(client, name="Wet", calorie_basis="PER_100G", kcal_per_basis=80.0)
+    treat = create_food(
+        client, name="Treat", type="TREAT", calorie_basis="PER_PIECE", kcal_per_basis=5.0
+    )
+    cat = create_cat(client)
+    meal = create_meal(client, cat_id=cat["id"], food_id=wet["id"], quantity=2.0)
+
+    response = client.patch(
+        f"/api/meals/{meal['id']}", json={"food_id": treat["id"], "quantity": 2.0}
+    )
+    assert response.status_code == 200
+    updated = response.json()
+    assert updated["food_id"] == treat["id"]
+    assert updated["basis"] == "PER_PIECE"
+    # Re-snapshot at the new food's per-piece kcal: 2 pieces x 5 kcal = 10.
+    assert updated["kcal"] == 10.0
