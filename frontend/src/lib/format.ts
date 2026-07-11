@@ -102,6 +102,15 @@ export function zonedWallClock(iso: string, timeZone: string): { date: string; t
 export function wallClockToUtcISO(date: string, time: string, timeZone: string): string {
   const [year, month, day] = date.split('-').map(Number)
   const [hour, minute] = time.split(':').map(Number)
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    hour === undefined ||
+    minute === undefined
+  ) {
+    throw new Error(`Invalid date/time: ${date} ${time}`)
+  }
   const wallAsUtcMs = Date.UTC(year, month - 1, day, hour, minute, 0)
   let utcMs = wallAsUtcMs - tzOffsetMs(timeZone, wallAsUtcMs)
   utcMs = wallAsUtcMs - tzOffsetMs(timeZone, utcMs)

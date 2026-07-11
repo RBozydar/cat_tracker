@@ -87,7 +87,10 @@ export function TimingHeatmap({ matrix }: TimingHeatmapProps) {
               >
                 <div className="pr-1 text-right text-[11px] text-muted-foreground">{label}</div>
                 {HOURS.map((hour) => {
-                  const count = cells[weekday * 24 + hour].count
+                  // cells is always exactly 7×24 (buildHeatmapCells zero-fills
+                  // ragged input), but the type system can't see that through
+                  // an arithmetic index — fall back to a zero cell defensively.
+                  const count = (cells[weekday * 24 + hour] ?? { count: 0 }).count
                   return (
                     <div
                       key={hour}

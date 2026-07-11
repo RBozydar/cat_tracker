@@ -26,8 +26,8 @@ export default function HistoryPage() {
   const [range, setRange] = useState<DateRange>(() => presetRange(DEFAULT_PRESET, today))
   const [selectedCatId, setSelectedCatId] = useState<string | undefined>(undefined)
 
-  const activeCatId =
-    selectedCatId ?? (cats.data && cats.data.length > 0 ? String(cats.data[0].id) : undefined)
+  const firstCat = cats.data?.[0]
+  const activeCatId = selectedCatId ?? (firstCat ? String(firstCat.id) : undefined)
 
   return (
     <section className="grid gap-6">

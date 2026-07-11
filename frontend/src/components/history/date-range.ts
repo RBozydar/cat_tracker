@@ -44,6 +44,9 @@ export function formatLocalISO(date: Date): string {
 /** Parse a `YYYY-MM-DD` string into a LOCAL midnight Date (for the calendar UI). */
 export function parseLocalISO(iso: string): Date {
   const [year, month, day] = iso.split('-').map(Number)
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Invalid ISO date: ${iso}`)
+  }
   return new Date(year, month - 1, day)
 }
 

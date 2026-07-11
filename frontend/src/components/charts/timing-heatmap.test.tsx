@@ -5,7 +5,10 @@ import { buildHeatmapCells, TimingHeatmap } from './timing-heatmap'
 /** A zeroed 7×24 matrix with a few `[weekday][hour]` cells set. */
 function matrixWith(entries: [weekday: number, hour: number, count: number][]): number[][] {
   const matrix = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0))
-  for (const [weekday, hour, count] of entries) matrix[weekday][hour] = count
+  for (const [weekday, hour, count] of entries) {
+    const row = matrix[weekday]
+    if (row) row[hour] = count
+  }
   return matrix
 }
 
@@ -28,8 +31,8 @@ test('buildHeatmapCells tolerates a ragged matrix (missing cells → 0)', () => 
   const { cells, max } = buildHeatmapCells([[1]]) // only weekday 0, hour 0
   expect(cells).toHaveLength(7 * 24)
   expect(max).toBe(1)
-  expect(cells[0].count).toBe(1)
-  expect(cells[8].count).toBe(0)
+  expect(cells[0]?.count).toBe(1)
+  expect(cells[8]?.count).toBe(0)
 })
 
 test('renders each weekday/hour cell with a count label', () => {

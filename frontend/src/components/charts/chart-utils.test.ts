@@ -49,7 +49,12 @@ test('timeTicks returns evenly spaced, in-range ticks and thins to the cap', () 
   expect(ticks[0]).toBe(0)
   expect(ticks.at(-1)).toBe(13 * 86_400_000)
   // strictly increasing (no duplicate/overprinted positions)
-  for (let i = 1; i < ticks.length; i++) expect(ticks[i]).toBeGreaterThan(ticks[i - 1])
+  for (let i = 1; i < ticks.length; i++) {
+    const prev = ticks[i - 1]
+    const curr = ticks[i]
+    if (prev === undefined || curr === undefined) throw new Error('tick index out of bounds')
+    expect(curr).toBeGreaterThan(prev)
+  }
 })
 
 test('timeTicks handles empty and single-point inputs', () => {
