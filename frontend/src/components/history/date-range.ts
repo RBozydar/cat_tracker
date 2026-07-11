@@ -2,13 +2,21 @@
  * Local-date math for the History range picker.
  *
  * The backend interprets `start`/`end` as household-LOCAL calendar dates
- * (`YYYY-MM-DD`). All arithmetic here works on calendar fields via the
- * `Date(year, month, day)` constructor, which the engine normalises in LOCAL
- * time — so decrementing the day across a month boundary or a DST transition
- * still yields the correct calendar day. We deliberately never touch
- * `toISOString()` (UTC) to derive a local date: near midnight in a +offset
- * timezone that would report the wrong day.
+ * (`YYYY-MM-DD`). Calendar-widget helpers below (`formatLocalISO`,
+ * `parseLocalISO`, `startOfLocalDay`) work on the *browser's* local calendar
+ * via the `Date(year, month, day)` constructor, which the engine normalises in
+ * LOCAL time — so decrementing the day across a month boundary or a DST
+ * transition still yields the correct calendar day. We deliberately never
+ * touch `toISOString()` (UTC) to derive a local date: near midnight in a
+ * +offset timezone that would report the wrong day.
+ *
+ * `presetRange`/`matchingPreset` take "today" as an already-resolved
+ * household-local `YYYY-MM-DD` string (see `zonedWallClock` in `lib/format`)
+ * rather than deriving it from the browser's clock — the viewer's timezone
+ * and the household's can differ, and the API only understands household-local
+ * dates.
  */
+import { shiftISODate } from '@/lib/format'
 
 export interface DateRange {
   start: string
@@ -45,14 +53,13 @@ export function startOfLocalDay(date: Date = new Date()): Date {
 }
 
 /**
- * A preset range ending today (inclusive) and spanning `days` calendar days.
- * `presetRange(7)` → today and the six days before it.
+ * A preset range ending `today` (inclusive, household-local `YYYY-MM-DD`) and
+ * spanning `days` calendar days. `presetRange(7, '2026-07-10')` → that date
+ * and the six days before it.
  */
-export function presetRange(days: RangePreset, today: Date = new Date()): DateRange {
-  const end = startOfLocalDay(today)
-  // day - (days - 1): inclusive of today, so the window is exactly `days` long.
-  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - (days - 1))
-  return { start: formatLocalISO(start), end: formatLocalISO(end) }
+export function presetRange(days: RangePreset, today: string): DateRange {
+  // days - 1: inclusive of today, so the window is exactly `days` long.
+  return { start: shiftISODate(today, -(days - 1)), end: today }
 }
 
 /** Inclusive count of calendar days between two local ISO dates (for labels). */
@@ -65,10 +72,23 @@ export function rangeLengthDays(range: DateRange): number {
 }
 
 /** Which preset (if any) a range currently matches — drives the picker's active state. */
-export function matchingPreset(range: DateRange, today: Date = new Date()): RangePreset | null {
+export function matchingPreset(range: DateRange, today: string): RangePreset | null {
   for (const { days } of PRESETS) {
     const preset = presetRange(days, today)
     if (preset.start === range.start && preset.end === range.end) return days
   }
   return null
+}
+
+/**
+ * Turn a react-day-picker range selection into a committed {@link DateRange},
+ * or `null` while only one end has been picked — the caller should wait
+ * rather than firing a half-range update (a single-day range is still
+ * reachable: clicking the start day again completes it with `to` = `from`).
+ */
+export function rangeFromCalendarSelection(
+  selected: { from?: Date; to?: Date } | undefined,
+): DateRange | null {
+  if (!selected?.from || !selected.to) return null
+  return { start: formatLocalISO(selected.from), end: formatLocalISO(selected.to) }
 }

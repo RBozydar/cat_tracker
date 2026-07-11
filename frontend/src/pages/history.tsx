@@ -6,7 +6,7 @@
  * the active tab is mounted, so exactly one range call is in flight per view.
  */
 import { useState } from 'react'
-import { useCats } from '@/api/hooks'
+import { useCats, useSettings } from '@/api/hooks'
 import { ComparisonSection } from '@/components/history/comparison-section'
 import { CatHistory } from '@/components/history/cat-history'
 import { DEFAULT_PRESET, presetRange, type DateRange } from '@/components/history/date-range'
@@ -14,10 +14,16 @@ import { DateRangePicker } from '@/components/history/date-range-picker'
 import { ChartSkeleton } from '@/components/history/section-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { zonedWallClock } from '@/lib/format'
 
 export default function HistoryPage() {
   const cats = useCats()
-  const [range, setRange] = useState<DateRange>(() => presetRange(DEFAULT_PRESET))
+  const settings = useSettings()
+  // Falls back to UTC until settings load, same as the weekly summary — the
+  // API only understands household-local dates, never the viewer's browser tz.
+  const timezone = settings.data?.timezone ?? 'UTC'
+  const today = zonedWallClock(new Date().toISOString(), timezone).date
+  const [range, setRange] = useState<DateRange>(() => presetRange(DEFAULT_PRESET, today))
   const [selectedCatId, setSelectedCatId] = useState<string | undefined>(undefined)
 
   const activeCatId =
@@ -32,7 +38,7 @@ export default function HistoryPage() {
             Calorie trends, meal timing, portions, and weight over a date range.
           </p>
         </div>
-        <DateRangePicker value={range} onChange={setRange} />
+        <DateRangePicker value={range} onChange={setRange} today={today} />
       </div>
 
       {cats.isPending ? (
