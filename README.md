@@ -46,12 +46,17 @@ container.
 
 ```bash
 uv sync                                              # create .venv from uv.lock
+uv run alembic upgrade head                          # create the SQLite schema (required before first run)
 uv run uvicorn app.main:app --reload --port 8137     # API at http://localhost:8137
 uv run python seed.py                                # optional: 3 cats, 6 foods, 2 weeks of data
 ```
 
 - Interactive API docs: `http://localhost:8137/docs`. Health:
   `http://localhost:8137/api/health`.
+- The migration step only needs to run once (and again after pulling new
+  migrations); without it the default `sqlite:///./cat_tracker.db` has no
+  tables and every endpoint 500s. The container entrypoint runs it
+  automatically — this manual step is dev-only.
 - `seed.py` is idempotent-ish (a no-op once cats exist) and dev-only; production
   starts from an empty database and real data.
 - Config comes from the environment / `backend/.env` (see `app/config.py`):
