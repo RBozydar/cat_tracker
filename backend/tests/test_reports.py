@@ -8,11 +8,19 @@ test sets Europe/Warsaw to exercise DST bucketing.
 
 from datetime import date
 
+from app.services.reports import _trend_pct
 from fastapi.testclient import TestClient
 
 from tests.helpers import add_weight, create_cat, create_food, create_meal, set_settings
 
 WET_KCAL_PER_100G = 80.0
+
+
+def test_trend_pct_is_none_when_previous_average_is_zero() -> None:
+    # Model invariants (positive quantity, positive kcal_per_basis) make a
+    # zero prev_avg with meals present unreachable via the API today, but the
+    # function stays defensive rather than dividing by zero if that ever changes.
+    assert _trend_pct(current_avg=40.0, prev_avg=0.0, prev_meal_count=3) is None
 
 
 def _today_for(client: TestClient, cat_id: int) -> dict:

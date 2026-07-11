@@ -119,11 +119,12 @@ def build_today_report(
 def _trend_pct(current_avg: float, prev_avg: float, prev_meal_count: int) -> float | None:
     """Percent change of the current average vs the previous window's average.
 
-    ``None`` when the previous window had no meals (``prev_avg`` would be 0 and
-    the comparison is meaningless — the UI renders "—").
+    ``None`` when the previous window had no meals, or (defensively — meals
+    always carry a positive kcal today) its average is zero: either way the
+    percent-change comparison is meaningless and the UI renders "—".
     """
 
-    if prev_meal_count == 0:
+    if prev_meal_count == 0 or prev_avg == 0:
         return None
     return (current_avg - prev_avg) / prev_avg * 100
 
