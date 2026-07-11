@@ -7,7 +7,7 @@
  * current instant. When the library is empty there is nothing to log — the form
  * points at Settings instead.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { useCreateMeal } from '@/api/hooks'
@@ -39,6 +39,16 @@ export function ManualLogForm({ cat, foods }: ManualLogFormProps) {
   const [foodId, setFoodId] = useState(() => defaultFoodId(cat, foods))
   const [quantity, setQuantity] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  // The foods query can still be loading when this form mounts (e.g. picking a
+  // cat before the library arrives), leaving foodId at '' with nothing to
+  // recompute it — fill in the default once foods show up, without clobbering
+  // a value the user already picked.
+  useEffect(() => {
+    if (!foodId && foods.length > 0) {
+      setFoodId(defaultFoodId(cat, foods))
+    }
+  }, [cat, foods, foodId])
 
   if (foods.length === 0) {
     return (
