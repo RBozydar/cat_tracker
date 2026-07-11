@@ -22,7 +22,9 @@ export function WeeklySummary() {
         <CardTitle>Last 7 days</CardTitle>
       </CardHeader>
       <CardContent>
-        {comparison.isPending ? (
+        {settings.isError ? (
+          <p className="text-sm text-destructive">{settings.error.message}</p>
+        ) : comparison.isPending ? (
           <p className="text-sm text-muted-foreground">Loading weekly summary…</p>
         ) : comparison.isError ? (
           <p className="text-sm text-destructive">{comparison.error.message}</p>
