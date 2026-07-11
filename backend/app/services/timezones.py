@@ -22,6 +22,9 @@ def resolve_timezone(name: str) -> ZoneInfo:
 def is_valid_timezone(name: str) -> bool:
     try:
         ZoneInfo(name)
+    # PEP 758 (Python 3.14+): unparenthesized exception tuple without `as`.
+    # Reads like removed Python-2 syntax but is valid and does the same thing
+    # as `except (ZoneInfoNotFoundError, ValueError):` on this project's pin.
     except ZoneInfoNotFoundError, ValueError:
         return False
     return True
