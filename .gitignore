@@ -3,6 +3,9 @@
 *.pem
 *.log
 
+# ---- Agent tooling (local, per-developer) ----
+.claude/
+
 # ---- Secrets / env ----
 .env
 .env.*

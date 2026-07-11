@@ -27,7 +27,7 @@ export function WeeklySummary() {
         ) : comparison.isError ? (
           <p className="text-sm text-destructive">{comparison.error.message}</p>
         ) : comparison.data.cats.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No cats to compare yet.</p>
+          <p className="text-sm text-muted-foreground">No cats to compare yet. Add cats in Settings.</p>
         ) : (
           <ul className="grid gap-2.5">
             {comparison.data.cats.map((cat) => (

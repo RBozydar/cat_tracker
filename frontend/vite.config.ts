@@ -12,9 +12,11 @@ export default defineConfig({
     },
   },
   server: {
-    // Dev-only: proxy API calls to the FastAPI backend (uvicorn on :3000).
+    // Dev-only: proxy API calls to the FastAPI backend. Local dev runs uvicorn on
+    // :8137 (host :3000 is taken by an unrelated service); the container still
+    // serves on :3000 internally, but that path never uses this proxy.
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api': 'http://localhost:8137',
     },
   },
   test: {

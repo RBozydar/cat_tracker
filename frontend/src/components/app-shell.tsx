@@ -42,7 +42,11 @@ export function AppShell() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pt-6 pb-24 md:pb-6">
+      {/* overflow-x-clip: a long unbroken cat name (or any stray-wide child)
+          is clipped here instead of scrolling the whole page sideways at 375pt.
+          Wide content that must be seen (tables, charts) keeps its own
+          overflow-x-auto, which scrolls inside this boundary. */}
+      <main className="mx-auto max-w-5xl overflow-x-clip px-4 pt-6 pb-24 md:pb-6">
         <Outlet />
       </main>
 
