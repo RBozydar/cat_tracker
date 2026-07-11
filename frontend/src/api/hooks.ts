@@ -143,7 +143,15 @@ export function useUpdateSettings() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (body: SettingsUpdate) => settingsApi.update(body),
-    onSuccess: () => invalidateAfterSettingsMutation(client),
+    // Seed the cache with the PUT response before invalidating. `invalidate*`
+    // only marks queries stale and refetches in the background, so without
+    // this a caller that clears its own "dirty"/unsaved-edit guard in its own
+    // onSuccess (which TanStack runs after this one) would momentarily reseed
+    // from whatever `settings.all` still held pre-save — see household-card.
+    onSuccess: (settings) => {
+      client.setQueryData(queryKeys.settings.all, settings)
+      invalidateAfterSettingsMutation(client)
+    },
   })
 }
 
