@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
+import { createQueryClient } from '@/api/query-client'
 import { queryKeys } from '@/api/query-keys'
 import { HouseholdCard } from './household-card'
 
@@ -125,4 +126,53 @@ test('saving does not flash back to stale data while the invalidation refetch is
 
   releaseSlowRefetch()
   await waitFor(() => expect(input).toHaveValue(9))
+})
+
+test('a dirty edit survives a visibilitychange-triggered background refetch', async () => {
+  let settingsCalls = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname === '/api/settings') {
+        settingsCalls += 1
+        // The second GET simulates the partner's phone having saved different
+        // settings in between; the app-resume refetch on this device brings it in.
+        const mealsPerDay = settingsCalls === 1 ? 2 : 4
+        return new Response(
+          JSON.stringify({
+            timezone: 'UTC',
+            portion_suggestions_enabled: false,
+            meals_per_day: mealsPerDay,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      return new Response(JSON.stringify({ detail: `unmocked ${url.pathname}` }), { status: 404 })
+    }),
+  )
+
+  // The real production client (staleTime 0, refetchOnWindowFocus true) —
+  // this is the two-device retune under test, not a hand-tuned test client.
+  render(
+    <QueryClientProvider client={createQueryClient()}>
+      <HouseholdCard />
+    </QueryClientProvider>,
+  )
+
+  const input = await screen.findByLabelText('Meals per day')
+  await waitFor(() => expect(input).toHaveValue(2))
+
+  await userEvent.clear(input)
+  await userEvent.type(input, '9')
+  expect(input).toHaveValue(9)
+
+  // Simulate the PWA resuming to the foreground (iOS "partner logged a meal,
+  // I open the app" case): TanStack's focus manager listens for exactly this.
+  window.dispatchEvent(new Event('visibilitychange'))
+
+  await waitFor(() => expect(settingsCalls).toBe(2))
+
+  // The in-progress unsaved edit survives the focus-triggered refetch.
+  expect(input).toHaveValue(9)
 })
