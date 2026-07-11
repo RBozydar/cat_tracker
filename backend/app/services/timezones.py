@@ -16,7 +16,8 @@ def resolve_timezone(name: str) -> ZoneInfo:
     try:
         return ZoneInfo(name)
     except (ZoneInfoNotFoundError, ValueError) as exc:
-        raise ValueError(f"Unknown timezone: {name!r}") from exc
+        msg = f"Unknown timezone: {name!r}"
+        raise ValueError(msg) from exc
 
 
 def is_valid_timezone(name: str) -> bool:

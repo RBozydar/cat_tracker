@@ -6,16 +6,20 @@ behavior is exercised for real. The ``get_session`` dependency is overridden to
 bind to that engine.
 """
 
-from collections.abc import Iterator
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from app.config import Settings
 from app.db import Base, create_db_engine, get_session
 from app.main import create_app
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+    from sqlalchemy import Engine
 
 
 @pytest.fixture

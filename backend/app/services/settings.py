@@ -6,11 +6,15 @@ comes from the ``APP_TIMEZONE`` environment value (fallback ``UTC`` if unset or
 not a valid IANA name).
 """
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from app.models import HouseholdSettings
 from app.services.timezones import is_valid_timezone
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 SETTINGS_ID = 1
 

@@ -31,7 +31,8 @@ def _reject_explicit_nulls(model: BaseModel, fields: tuple[str, ...]) -> None:
 
     nulled = sorted(f for f in fields if f in model.model_fields_set and getattr(model, f) is None)
     if nulled:
-        raise ValueError(f"{', '.join(nulled)} must not be null")
+        msg = f"{', '.join(nulled)} must not be null"
+        raise ValueError(msg)
 
 
 # --- Foods -----------------------------------------------------------------
@@ -214,7 +215,7 @@ class CatTodayReport(BaseModel):
     cat_name: str
     target_kcal: float
     consumed_kcal: float
-    # target − consumed; negative when the cat is over target.
+    # target - consumed; negative when the cat is over target.
     remaining_kcal: float
     over: bool
     # Grams of each default food equal to ``max(remaining, 0)`` kcal (clamped).
@@ -272,8 +273,8 @@ class RangeReport(BaseModel):
     # Percent change of this window's average vs the immediately preceding
     # window of equal length; null when that previous window has no meals.
     trend_pct: float | None
-    # 7×24 meal-count matrix indexed [weekday][hour]; weekday 0 = Monday
-    # (Python ``date.weekday()``), hour 0–23 in household-local time.
+    # 7x24 meal-count matrix indexed [weekday][hour]; weekday 0 = Monday
+    # (Python ``date.weekday()``), hour 0-23 in household-local time.
     timing_pattern: list[list[int]]
     portion_history: list[PortionHistoryPoint]
     weight_series: list[WeightPoint]
@@ -288,7 +289,7 @@ class CatComparison(BaseModel):
     cat_name: str
     avg_kcal_per_day: float
     target_kcal: float
-    # avg_kcal_per_day / target_kcal × 100; exceeds 100 when over target.
+    # avg_kcal_per_day / target_kcal x 100; exceeds 100 when over target.
     adherence_pct: float
 
 
@@ -312,10 +313,10 @@ class TargetBasis(StrEnum):
 class TargetSuggestionResponse(BaseModel):
     """RER/MER breakdown for the calculator dialog (always a suggestion).
 
-    ``rer_kcal = 70 × basis_weight ** 0.75`` where the basis weight is the goal
+    ``rer_kcal = 70 x basis_weight ** 0.75`` where the basis weight is the goal
     weight (factor 0.8, weight loss) when a goal is set, otherwise the current
     weight (factor 1.2, neutered-adult maintenance).
-    ``suggested_target_kcal = rer_kcal × factor``.
+    ``suggested_target_kcal = rer_kcal x factor``.
     """
 
     cat_id: int

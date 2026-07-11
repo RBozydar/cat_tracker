@@ -10,7 +10,7 @@ and aggregates in Python rather than pushing GROUP BY into SQL.
 
 from collections import defaultdict
 from datetime import date, datetime, timedelta
-from zoneinfo import ZoneInfo
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -29,6 +29,9 @@ from app.schemas import (
 )
 from app.services.calories import derive_kcal, portion_grams, remaining_to_grams
 from app.services.timezones import local_day_bounds, local_range_bounds
+
+if TYPE_CHECKING:
+    from zoneinfo import ZoneInfo
 
 
 def _meal_kcal(meal: Meal) -> float:
@@ -138,7 +141,7 @@ def build_range_report(
     prev_start = start - timedelta(days=num_days)
     prev_end = start - timedelta(days=1)
 
-    range_start_utc, range_end_utc = local_range_bounds(start, end, tz)
+    _, range_end_utc = local_range_bounds(start, end, tz)
     prev_start_utc, _ = local_day_bounds(prev_start, tz)
 
     # One fetch covers both the current and preceding windows (contiguous in UTC).

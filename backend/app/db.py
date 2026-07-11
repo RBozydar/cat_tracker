@@ -16,10 +16,9 @@ enforcement enabled (needed for ON DELETE CASCADE on cats and the RESTRICT on
 ``meal.food_id``). A single uvicorn worker keeps writes serialised.
 """
 
-from collections.abc import Iterator
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends
 from sqlalchemy import DateTime, Engine, create_engine, event
@@ -27,6 +26,9 @@ from sqlalchemy.orm import DeclarativeBase, Session
 from sqlalchemy.types import TypeDecorator
 
 from app.config import Settings, get_settings
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class Base(DeclarativeBase):
@@ -45,14 +47,14 @@ class UTCDateTime(TypeDecorator[datetime]):
     impl = DateTime
     cache_ok = True
 
-    def process_bind_param(self, value: datetime | None, dialect: Any) -> datetime | None:
+    def process_bind_param(self, value: datetime | None, _dialect: Any) -> datetime | None:
         if value is None:
             return None
         if value.tzinfo is not None:
             value = value.astimezone(UTC)
         return value.replace(tzinfo=None)
 
-    def process_result_value(self, value: datetime | None, dialect: Any) -> datetime | None:
+    def process_result_value(self, value: datetime | None, _dialect: Any) -> datetime | None:
         if value is None:
             return None
         return value.replace(tzinfo=UTC)

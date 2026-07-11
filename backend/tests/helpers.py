@@ -1,8 +1,9 @@
 """Small API helpers to keep integration tests readable."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from fastapi.testclient import TestClient
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 def create_food(client: TestClient, **overrides: Any) -> dict[str, Any]:
@@ -15,7 +16,8 @@ def create_food(client: TestClient, **overrides: Any) -> dict[str, Any]:
     payload.update(overrides)
     response = client.post("/api/foods", json=payload)
     assert response.status_code == 201, response.text
-    return response.json()
+    body: dict[str, Any] = response.json()
+    return body
 
 
 def create_cat(client: TestClient, **overrides: Any) -> dict[str, Any]:
@@ -23,7 +25,8 @@ def create_cat(client: TestClient, **overrides: Any) -> dict[str, Any]:
     payload.update(overrides)
     response = client.post("/api/cats", json=payload)
     assert response.status_code == 201, response.text
-    return response.json()
+    body: dict[str, Any] = response.json()
+    return body
 
 
 def create_meal(client: TestClient, **overrides: Any) -> dict[str, Any]:
@@ -31,7 +34,8 @@ def create_meal(client: TestClient, **overrides: Any) -> dict[str, Any]:
     payload.update(overrides)
     response = client.post("/api/meals", json=payload)
     assert response.status_code == 201, response.text
-    return response.json()
+    body: dict[str, Any] = response.json()
+    return body
 
 
 def add_weight(
@@ -42,7 +46,8 @@ def add_weight(
         json={"weight_kg": weight_kg, "measured_on": measured_on},
     )
     assert response.status_code == 201, response.text
-    return response.json()
+    body: dict[str, Any] = response.json()
+    return body
 
 
 def set_settings(

@@ -1,10 +1,12 @@
 """Meals: snapshot rules, kcal derivation, local-date filtering, ordering."""
 
 from datetime import UTC, datetime, timedelta
-
-from fastapi.testclient import TestClient
+from typing import TYPE_CHECKING
 
 from tests.helpers import create_cat, create_food, create_meal, set_timezone
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 def test_per_100g_kcal_derivation(client: TestClient) -> None:

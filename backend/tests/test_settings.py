@@ -1,11 +1,14 @@
 """Settings singleton: auto-create, defaults, PUT, timezone validation."""
 
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 from app.services.settings import SETTINGS_ID, get_or_create_settings
-from fastapi.testclient import TestClient
-from sqlalchemy import Engine
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
+    from sqlalchemy import Engine
 
 
 def test_get_auto_creates_singleton_with_defaults(client: TestClient) -> None:
@@ -81,7 +84,7 @@ def test_get_or_create_settings_recovers_from_concurrent_creation_race(engine: E
         original_get = Session.get
         calls = {"n": 0}
 
-        def racy_get(self: Session, *args: object, **kwargs: object) -> object:
+        def racy_get(self: Session, *args: Any, **kwargs: Any) -> object:
             calls["n"] += 1
             # First call simulates session_b racing before session_a's commit
             # was visible to it, forcing get_or_create_settings into the

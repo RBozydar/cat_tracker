@@ -1,10 +1,13 @@
 """SPA fallback: serves the built frontend, refuses to escape ``dist``."""
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.config import Settings
 from app.main import create_app
 from fastapi.testclient import TestClient
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _spa_client(dist: Path) -> TestClient:

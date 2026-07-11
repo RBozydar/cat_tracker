@@ -7,11 +7,14 @@ test sets Europe/Warsaw to exercise DST bucketing.
 """
 
 from datetime import date
+from typing import TYPE_CHECKING, Any
 
 from app.services.reports import _trend_pct
-from fastapi.testclient import TestClient
 
 from tests.helpers import add_weight, create_cat, create_food, create_meal, set_settings
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 WET_KCAL_PER_100G = 80.0
 
@@ -23,7 +26,7 @@ def test_trend_pct_is_none_when_previous_average_is_zero() -> None:
     assert _trend_pct(current_avg=40.0, prev_avg=0.0, prev_meal_count=3) is None
 
 
-def _today_for(client: TestClient, cat_id: int) -> dict:
+def _today_for(client: TestClient, cat_id: int) -> dict[str, Any]:
     payload = client.get("/api/reports/today").json()
     return next(c for c in payload["cats"] if c["cat_id"] == cat_id)
 
@@ -140,7 +143,7 @@ def test_range_series_average_and_trend(client: TestClient) -> None:
 
     assert body["target_kcal"] == 200.0
     assert body["avg_kcal_per_day"] == 40.0
-    # (40 − 20) / 20 × 100 = 100 %.
+    # (40 - 20) / 20 x 100 = 100 %.
     assert body["trend_pct"] == 100.0
     assert [p["date"] for p in body["daily_kcal"]] == [f"2026-07-{d:02d}" for d in range(8, 15)]
     assert all(p["kcal"] == 40.0 for p in body["daily_kcal"])

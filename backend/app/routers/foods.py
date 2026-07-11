@@ -8,15 +8,17 @@
 """
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
 
 from app.db import SessionDep
 from app.models import Cat, Food, Meal
 from app.schemas import FoodCreate, FoodDeleteResult, FoodResponse, FoodUpdate
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["foods"])
 

@@ -8,10 +8,10 @@ Validation rules (plan "Model invariants"):
 """
 
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import SessionDep
@@ -25,6 +25,9 @@ from app.schemas import (
 )
 from app.services.settings import get_or_create_settings
 from app.services.timezones import resolve_timezone
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["cats"])
 

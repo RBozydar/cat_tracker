@@ -1,16 +1,20 @@
 """Target-calorie calculator: RER/MER math (golden numbers) and the endpoint.
 
-Golden RER values are hand-computed as ``70 × kg ** 0.75``:
+Golden RER values are hand-computed as ``70 x kg ** 0.75``:
 - 4.0 kg → 4 ** 0.75 = 2 ** 1.5 = 2.8284271247461903 → RER 197.98989873223333
 - 5.0 kg → 5 ** 0.75 = 3.3437015248821105 → RER 234.05910674174773
 """
 
+from typing import TYPE_CHECKING
+
 import pytest
 from app.schemas import TargetBasis
-from app.services.target import InsufficientWeightData, compute_target_suggestion
-from fastapi.testclient import TestClient
+from app.services.target import InsufficientWeightDataError, compute_target_suggestion
 
 from tests.helpers import add_weight, create_cat
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 RER_4KG = 197.98989873223333
 RER_5KG = 234.05910674174773
@@ -47,7 +51,7 @@ def test_goal_weight_wins_even_without_a_weigh_in() -> None:
 
 
 def test_neither_goal_nor_current_raises() -> None:
-    with pytest.raises(InsufficientWeightData):
+    with pytest.raises(InsufficientWeightDataError):
         compute_target_suggestion(cat_id=1, goal_weight_kg=None, current_weight_kg=None)
 
 

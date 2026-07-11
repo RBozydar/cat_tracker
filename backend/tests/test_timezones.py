@@ -48,5 +48,5 @@ def test_resolve_and_validate_timezone() -> None:
     assert resolve_timezone("Europe/Warsaw") == WARSAW
     assert is_valid_timezone("America/New_York")
     assert not is_valid_timezone("Mars/Phobos")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Unknown timezone"):
         resolve_timezone("Not/AZone")

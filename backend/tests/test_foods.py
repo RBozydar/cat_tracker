@@ -1,8 +1,11 @@
 """Foods: creation, type immutability, archive-on-delete, defaults clearing."""
 
-from fastapi.testclient import TestClient
+from typing import TYPE_CHECKING
 
 from tests.helpers import create_cat, create_food, create_meal
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 def test_create_and_list_excludes_archived_by_default(client: TestClient) -> None:

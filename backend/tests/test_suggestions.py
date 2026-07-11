@@ -2,14 +2,16 @@
 
 The 14-day window is relative to *now*, so meal timestamps are built from the
 current instant rather than fixed dates. Suggestions are priced at each food's
-current values, so a PER_100G food at 80 kcal/100 g gives quantity × 0.8 kcal.
+current values, so a PER_100G food at 80 kcal/100 g gives quantity x 0.8 kcal.
 """
 
 from datetime import UTC, datetime, timedelta
-
-from fastapi.testclient import TestClient
+from typing import TYPE_CHECKING
 
 from tests.helpers import create_cat, create_food, create_meal
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 WET_KCAL_PER_100G = 80.0
 
@@ -22,7 +24,7 @@ def test_ranked_by_count_then_recency_with_most_recent_appended(client: TestClie
     food = create_food(client, kcal_per_basis=WET_KCAL_PER_100G)
     cat = create_cat(client, target_kcal=200.0)
 
-    # A (50 g) ×3, oldest cluster; B (40 g) ×3, newer; C (30 g) ×2; D (20 g) ×1, newest.
+    # A (50 g) x3, oldest cluster; B (40 g) x3, newer; C (30 g) x2; D (20 g) x1, newest.
     for hours in (10, 9, 8):
         create_meal(
             client, cat_id=cat["id"], food_id=food["id"], quantity=50.0, fed_at=_hours_ago(hours)

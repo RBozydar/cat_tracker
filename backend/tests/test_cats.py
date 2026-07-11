@@ -1,8 +1,11 @@
 """Cats: creation, defaults validation, weights upsert/delete, cascade delete."""
 
-from fastapi.testclient import TestClient
+from typing import TYPE_CHECKING
 
 from tests.helpers import create_cat, create_food, create_meal
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 def test_create_without_weight_has_null_current_weight(client: TestClient) -> None:

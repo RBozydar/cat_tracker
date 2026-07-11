@@ -1,13 +1,13 @@
 """Target-calorie calculator — veterinary RER/MER with a full breakdown.
 
-``RER = 70 × weight_kg ** 0.75``. A weight-loss factor of 0.8 is applied to the
+``RER = 70 x weight_kg ** 0.75``. A weight-loss factor of 0.8 is applied to the
 **goal** weight when the cat has one; otherwise a neutered-adult maintenance
 factor of 1.2 is applied to the **current** weight. The result is always a
 suggestion — the router never writes it to the cat's stored target.
 
 Pure and DB-free so the math is unit-tested against hand-computed golden
 numbers; the router supplies the cat's goal and current weights and translates
-:class:`InsufficientWeightData` into a 400.
+:class:`InsufficientWeightDataError` into a 400.
 """
 
 from app.schemas import TargetBasis, TargetSuggestionResponse
@@ -16,7 +16,7 @@ GOAL_WEIGHT_FACTOR = 0.8
 MAINTENANCE_FACTOR = 1.2
 
 
-class InsufficientWeightData(ValueError):
+class InsufficientWeightDataError(ValueError):
     """No goal weight and no weight entry — nothing to compute a target from."""
 
 
@@ -42,9 +42,8 @@ def compute_target_suggestion(
         basis_weight = current_weight_kg
         factor = MAINTENANCE_FACTOR
     else:
-        raise InsufficientWeightData(
-            f"Cat {cat_id} has no goal weight and no weight entries to compute a target from"
-        )
+        msg = f"Cat {cat_id} has no goal weight and no weight entries to compute a target from"
+        raise InsufficientWeightDataError(msg)
 
     rer = _rer_kcal(basis_weight)
     return TargetSuggestionResponse(

@@ -5,7 +5,7 @@ it from ``/`` with a client-side-routing fallback. Unknown ``/api/*`` routes
 always return JSON 404 (never the SPA shell).
 """
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
@@ -14,6 +14,9 @@ from fastapi.staticfiles import StaticFiles
 from app.config import Settings, get_settings
 from app.routers import cats, foods, health, meals, reports, target
 from app.routers import settings as settings_router
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -42,7 +45,7 @@ def _register_api_not_found(app: FastAPI) -> None:
     fallback below.
     """
 
-    async def api_not_found(path: str) -> JSONResponse:
+    async def api_not_found(path: str) -> JSONResponse:  # noqa: ARG001 — name must match "{path:path}" for FastAPI to bind it
         return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
     app.add_api_route(

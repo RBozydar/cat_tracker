@@ -7,7 +7,7 @@ excluded because logging them would 400. With no usable history, falls back to
 the cat's default foods at their portion-suggestion grams.
 
 Suggestions are *proposals* priced at each food's current values (a fresh log
-snapshots anew), never historical meal snapshots. The rolling window is 14×24h
+snapshots anew), never historical meal snapshots. The rolling window is 14x24h
 from now (UTC): a recency heuristic, not a report boundary, so it deliberately
 does not use local-date bucketing.
 """

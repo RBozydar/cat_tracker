@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.db import SessionDep
 from app.models import Cat, WeightEntry
 from app.schemas import TargetSuggestionResponse
-from app.services.target import InsufficientWeightData, compute_target_suggestion
+from app.services.target import InsufficientWeightDataError, compute_target_suggestion
 
 router = APIRouter(tags=["target"])
 
@@ -30,5 +30,5 @@ def target_suggestion(session: SessionDep, cat_id: int) -> TargetSuggestionRespo
     )
     try:
         return compute_target_suggestion(cat.id, cat.goal_weight_kg, current_weight_kg)
-    except InsufficientWeightData as exc:
+    except InsufficientWeightDataError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
