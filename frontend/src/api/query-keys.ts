@@ -73,9 +73,15 @@ export function invalidateAfterFoodMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: queryKeys.reports.all })
 }
 
-/** Cat create/update/delete (incl. applying a suggested target). */
+/**
+ * Cat create/update/delete (incl. applying a suggested target). Meals refresh
+ * too: a rename changes cat names cached in recent-meal rows, and
+ * `default_wet_food_id`/`default_dry_food_id`/`target_kcal` edits feed
+ * `/meals/suggestions`' no-history fallback portions.
+ */
 export function invalidateAfterCatMutation(client: QueryClient, catId?: number): void {
   void client.invalidateQueries({ queryKey: queryKeys.cats.all })
+  void client.invalidateQueries({ queryKey: queryKeys.meals.all })
   void client.invalidateQueries({ queryKey: queryKeys.reports.all })
   if (catId !== undefined) {
     void client.invalidateQueries({ queryKey: queryKeys.targetSuggestion(catId) })

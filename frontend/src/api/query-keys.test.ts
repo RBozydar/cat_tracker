@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  invalidateAfterCatMutation,
   invalidateAfterFoodMutation,
   invalidateAfterMealMutation,
   invalidateAfterSettingsMutation,
@@ -17,6 +18,12 @@ describe('invalidation map', () => {
   it('food mutations also refresh meals (recent-meal food names, re-log chips)', () => {
     const client = new QueryClient()
     const keys = invalidatedKeyRoots(client, invalidateAfterFoodMutation)
+    expect(keys).toContainEqual(queryKeys.meals.all)
+  })
+
+  it('cat mutations also refresh meals (renamed cats, changed suggestion defaults)', () => {
+    const client = new QueryClient()
+    const keys = invalidatedKeyRoots(client, (c) => invalidateAfterCatMutation(c))
     expect(keys).toContainEqual(queryKeys.meals.all)
   })
 
