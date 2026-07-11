@@ -13,7 +13,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { formatKcal } from '@/lib/format'
-import { formatDayFull, formatDayTick, tickInterval } from './chart-utils'
+import { formatDayFull, formatDayTick, kcalYDomain, tickInterval } from './chart-utils'
 
 const config = {
   kcal: { label: 'Consumed', color: 'var(--chart-1)' },
@@ -40,6 +40,10 @@ export function DailyKcalChart({ data, targetKcal }: DailyKcalChartProps) {
         />
         <YAxis
           width={40}
+          domain={kcalYDomain(
+            data.map((point) => point.kcal),
+            targetKcal,
+          )}
           tickLine={false}
           axisLine={false}
           tickMargin={4}

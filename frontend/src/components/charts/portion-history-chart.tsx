@@ -15,7 +15,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart'
-import { formatInstant, tickInterval } from './chart-utils'
+import { formatInstant, timeTicks } from './chart-utils'
 
 const config = {
   wet: { label: 'Wet', color: 'var(--chart-1)' },
@@ -41,6 +41,7 @@ interface PortionHistoryChartProps {
 export function PortionHistoryChart({ history }: PortionHistoryChartProps) {
   const wet = toPoints(history, 'WET')
   const dry = toPoints(history, 'DRY')
+  const ticks = timeTicks(history.map((point) => Date.parse(point.fed_at)))
 
   return (
     <ChartContainer config={config} className="aspect-auto h-64 w-full">
@@ -51,10 +52,11 @@ export function PortionHistoryChart({ history }: PortionHistoryChartProps) {
           dataKey="t"
           domain={['dataMin', 'dataMax']}
           scale="time"
+          ticks={ticks}
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          interval={tickInterval(new Set(history.map((point) => point.fed_at.slice(0, 10))).size)}
+          minTickGap={24}
           tickFormatter={(value: number) =>
             new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
           }

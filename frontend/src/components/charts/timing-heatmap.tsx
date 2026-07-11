@@ -61,59 +61,63 @@ export function TimingHeatmap({ matrix }: TimingHeatmapProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[520px]">
-        {/* Hour header. */}
-        <div
-          className="grid gap-0.5 pl-10 text-[10px] text-muted-foreground tabular-nums"
-          style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
-        >
-          {HOURS.map((hour) => (
-            <div key={hour} className="text-center">
-              {LABELLED_HOURS.has(hour) ? hour : ''}
-            </div>
-          ))}
-        </div>
-
-        {/* One row per weekday. */}
-        <div className="mt-1 grid gap-0.5">
-          {WEEKDAYS.map((label, weekday) => (
-            <div
-              key={label}
-              className="grid items-center gap-0.5"
-              style={{ gridTemplateColumns: '2.5rem repeat(24, minmax(0, 1fr))' }}
-            >
-              <div className="pr-1 text-right text-[11px] text-muted-foreground">{label}</div>
-              {HOURS.map((hour) => {
-                const count = cells[weekday * 24 + hour].count
-                return (
-                  <div
-                    key={hour}
-                    title={`${label} ${formatHour(hour)} — ${count} meal${count === 1 ? '' : 's'}`}
-                    aria-label={`${label} ${formatHour(hour)}, ${count} meals`}
-                    className="aspect-square rounded-[2px] ring-1 ring-inset ring-border/40"
-                    style={{ backgroundColor: cellBackground(count, max) }}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
-
-        {/* Sequential legend. */}
-        <div className="mt-3 flex items-center justify-end gap-2 pr-1 text-[11px] text-muted-foreground">
-          <span>Fewer</span>
-          <div className="flex gap-0.5">
-            {[18, 45, 72, 100].map((pct) => (
-              <div
-                key={pct}
-                className="size-3 rounded-[2px] ring-1 ring-inset ring-border/40"
-                style={{ backgroundColor: `color-mix(in oklab, var(--chart-1) ${pct}%, transparent)` }}
-              />
+    <div>
+      {/* The 24-column matrix scrolls horizontally on narrow cards… */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[520px]">
+          {/* Hour header. */}
+          <div
+            className="grid gap-0.5 pl-10 text-[10px] text-muted-foreground tabular-nums"
+            style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
+          >
+            {HOURS.map((hour) => (
+              <div key={hour} className="text-center">
+                {LABELLED_HOURS.has(hour) ? hour : ''}
+              </div>
             ))}
           </div>
-          <span>More (peak {max})</span>
+
+          {/* One row per weekday. */}
+          <div className="mt-1 grid gap-0.5">
+            {WEEKDAYS.map((label, weekday) => (
+              <div
+                key={label}
+                className="grid items-center gap-0.5"
+                style={{ gridTemplateColumns: '2.5rem repeat(24, minmax(0, 1fr))' }}
+              >
+                <div className="pr-1 text-right text-[11px] text-muted-foreground">{label}</div>
+                {HOURS.map((hour) => {
+                  const count = cells[weekday * 24 + hour].count
+                  return (
+                    <div
+                      key={hour}
+                      title={`${label} ${formatHour(hour)} — ${count} meal${count === 1 ? '' : 's'}`}
+                      aria-label={`${label} ${formatHour(hour)}, ${count} meals`}
+                      className="aspect-square rounded-[2px] ring-1 ring-inset ring-border/40"
+                      style={{ backgroundColor: cellBackground(count, max) }}
+                    />
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* …but the sequential legend stays in the card's visible flow (outside the
+          scroll container) so "More (peak N)" is never clipped at the right edge. */}
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+        <span>Fewer</span>
+        <div className="flex gap-0.5">
+          {[18, 45, 72, 100].map((pct) => (
+            <div
+              key={pct}
+              className="size-3 rounded-[2px] ring-1 ring-inset ring-border/40"
+              style={{ backgroundColor: `color-mix(in oklab, var(--chart-1) ${pct}%, transparent)` }}
+            />
+          ))}
+        </div>
+        <span>More (peak {max})</span>
       </div>
     </div>
   )

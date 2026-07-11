@@ -13,7 +13,7 @@ import {
   type ChartConfig,
 } from '@/components/ui/chart'
 import { formatKg } from '@/lib/format'
-import { formatDayFull, formatDayTick, tickInterval } from './chart-utils'
+import { formatDayFull, formatDayTick, tickInterval, weightYDomain } from './chart-utils'
 
 const config = {
   weight_kg: { label: 'Weight', color: 'var(--chart-1)' },
@@ -25,12 +25,11 @@ interface WeightTrendChartProps {
 }
 
 export function WeightTrendChart({ data, goalWeightKg }: WeightTrendChartProps) {
-  // Pad the Y domain so a flat series and the goal line both sit off the edges.
-  const weights = data.map((point) => point.weight_kg)
-  const candidates = goalWeightKg != null ? [...weights, goalWeightKg] : weights
-  const min = Math.min(...candidates)
-  const max = Math.max(...candidates)
-  const pad = Math.max((max - min) * 0.15, 0.2)
+  // Domain always brackets the goal line, so a cat above or below goal still shows it.
+  const domain = weightYDomain(
+    data.map((point) => point.weight_kg),
+    goalWeightKg,
+  )
 
   return (
     <ChartContainer config={config} className="aspect-auto h-64 w-full">
@@ -38,6 +37,9 @@ export function WeightTrendChart({ data, goalWeightKg }: WeightTrendChartProps) 
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey="measured_on"
+          // Inset the band ends so the first/last tick labels aren't clipped at
+          // the card edge (weigh-ins are sparse, so every tick is shown).
+          padding={{ left: 6, right: 12 }}
           tickLine={false}
           axisLine={false}
           tickMargin={8}
@@ -47,7 +49,7 @@ export function WeightTrendChart({ data, goalWeightKg }: WeightTrendChartProps) 
         />
         <YAxis
           width={44}
-          domain={[Number((min - pad).toFixed(2)), Number((max + pad).toFixed(2))]}
+          domain={domain}
           tickLine={false}
           axisLine={false}
           tickMargin={4}
