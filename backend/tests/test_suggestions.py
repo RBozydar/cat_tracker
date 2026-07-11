@@ -96,6 +96,26 @@ def test_fallback_to_defaults_when_no_history(client: TestClient) -> None:
     assert by_food[dry["id"]]["quantity"] == 100.0 / (400.0 / 100)
 
 
+def test_basis_changed_meals_excluded_then_falls_back(client: TestClient) -> None:
+    food = create_food(client, name="Chicken", kcal_per_basis=WET_KCAL_PER_100G)
+    default_wet = create_food(client, name="Backup Wet", kcal_per_basis=90.0)
+    cat = create_cat(client, target_kcal=200.0, default_wet_food_id=default_wet["id"])
+    create_meal(client, cat_id=cat["id"], food_id=food["id"], quantity=50.0, fed_at=_hours_ago(2))
+
+    # The food's calorie basis changes after the meal was logged (50 g no
+    # longer means anything once the food is priced per piece).
+    response = client.patch(
+        f"/api/foods/{food['id']}", json={"calorie_basis": "PER_PIECE", "kcal_per_basis": 5.0}
+    )
+    assert response.status_code == 200
+
+    suggestions = client.get(f"/api/meals/suggestions?cat_id={cat['id']}").json()
+
+    # The stale-basis combo is excluded → falls back to the default wet food.
+    assert len(suggestions) == 1
+    assert suggestions[0]["food_id"] == default_wet["id"]
+
+
 def test_no_history_and_no_defaults_is_empty(client: TestClient) -> None:
     cat = create_cat(client, target_kcal=200.0)
     assert client.get(f"/api/meals/suggestions?cat_id={cat['id']}").json() == []

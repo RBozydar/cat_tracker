@@ -55,8 +55,15 @@ def build_meal_suggestions(session: Session, cat: Cat, meals_per_day: int) -> li
         .where(Meal.cat_id == cat.id, Meal.fed_at >= cutoff)
         .order_by(Meal.fed_at.desc())
     ).all()
-    # Newest-first; drop meals whose food is archived (they cannot be re-logged).
-    usable = [meal for meal in meals if meal.food.archived_at is None]
+    # Newest-first; drop meals whose food is archived (they cannot be re-logged)
+    # or whose calorie basis changed since the meal was logged — the historical
+    # quantity's unit (grams vs. pieces) would otherwise be silently reinterpreted
+    # under the food's current basis.
+    usable = [
+        meal
+        for meal in meals
+        if meal.food.archived_at is None and meal.basis_snapshot == meal.food.calorie_basis
+    ]
 
     if not usable:
         return _fallback_suggestions(session, cat, meals_per_day)
