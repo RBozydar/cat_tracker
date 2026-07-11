@@ -135,3 +135,31 @@ test('reinitializes date/time once the real household timezone arrives', async (
   rerender(renderWithTimezone('Europe/Warsaw'))
   await waitFor(() => expect(time.value).toBe('14:30'))
 })
+
+test('an in-progress date/time edit survives a timezone refetch mid-edit', async () => {
+  installFetchMock([
+    { method: 'GET', path: '/api/cats', body: cats },
+    { method: 'GET', path: '/api/foods', body: foods },
+  ])
+  const queryClient = createQueryClient()
+  const renderWithTimezone = (timezone: string) => (
+    <QueryClientProvider client={queryClient}>
+      <MealDetailSheet meal={meal} timezone={timezone} onClose={vi.fn()} />
+      <Toaster />
+    </QueryClientProvider>
+  )
+
+  const { rerender } = render(renderWithTimezone('Europe/Warsaw'))
+  const time = (await screen.findByLabelText('Time')) as HTMLInputElement
+  expect(time.value).toBe('14:30')
+
+  // The user starts editing the time before a background refetch (e.g. the
+  // partner changing the household timezone) resolves.
+  fireEvent.change(time, { target: { value: '16:00' } })
+  expect(time.value).toBe('16:00')
+
+  // `timezone` is live query data — a refetch bringing in a new value must
+  // not clobber the in-progress edit with a recompute from the old fed_at.
+  rerender(renderWithTimezone('America/New_York'))
+  expect(time.value).toBe('16:00')
+})

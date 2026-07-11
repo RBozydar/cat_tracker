@@ -69,16 +69,23 @@ export function MealDetailSheet({ meal, timezone, onClose }: MealDetailSheetProp
   const [time, setTime] = useState(initial.time)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Tracks unsaved edits so a background refetch that changes `timezone`
+  // mid-edit (see below) can't silently reset the fields the user is editing.
+  const [dirty, setDirty] = useState(false)
 
   // `RecentMeals` seeds `timezone` from settings, falling back to UTC while
   // that query is still pending; if it opens this sheet in that window, the
   // date/time above were seeded wrong. Reinitialize once the real timezone
-  // (or a different meal via the `key={meal.id}` remount) arrives.
+  // arrives (or a different meal via the `key={meal.id}` remount, which
+  // starts a fresh `dirty` too) — but only while the sheet is still clean:
+  // `timezone` is live query data, and a refetch shouldn't clobber an
+  // in-progress edit any more than household settings should.
   useEffect(() => {
+    if (dirty) return
     const resolved = zonedWallClock(meal.fed_at, timezone)
     setDate(resolved.date)
     setTime(resolved.time)
-  }, [meal.fed_at, timezone])
+  }, [meal.fed_at, timezone, dirty])
 
   const foodOptions = foods.data ?? []
   const selectedFood = foodOptions.find((food) => String(food.id) === foodId)
@@ -150,7 +157,13 @@ export function MealDetailSheet({ meal, timezone, onClose }: MealDetailSheetProp
         <form onSubmit={handleSave} className="grid gap-4">
           <div className="grid gap-1.5">
             <Label htmlFor="meal-cat">Cat</Label>
-            <Select value={catId} onValueChange={setCatId}>
+            <Select
+              value={catId}
+              onValueChange={(value) => {
+                setCatId(value)
+                setDirty(true)
+              }}
+            >
               <SelectTrigger id="meal-cat" className="h-11 w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -166,7 +179,13 @@ export function MealDetailSheet({ meal, timezone, onClose }: MealDetailSheetProp
 
           <div className="grid gap-1.5">
             <Label htmlFor="meal-food">Food</Label>
-            <Select value={foodId} onValueChange={setFoodId}>
+            <Select
+              value={foodId}
+              onValueChange={(value) => {
+                setFoodId(value)
+                setDirty(true)
+              }}
+            >
               <SelectTrigger id="meal-food" className="h-11 w-full">
                 <SelectValue placeholder={meal.food_name} />
               </SelectTrigger>
@@ -190,7 +209,10 @@ export function MealDetailSheet({ meal, timezone, onClose }: MealDetailSheetProp
               min="0"
               step="any"
               value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
+              onChange={(event) => {
+                setQuantity(event.target.value)
+                setDirty(true)
+              }}
               required
             />
           </div>
@@ -203,7 +225,10 @@ export function MealDetailSheet({ meal, timezone, onClose }: MealDetailSheetProp
                 className="h-11"
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
+                onChange={(event) => {
+                  setDate(event.target.value)
+                  setDirty(true)
+                }}
                 required
               />
             </div>
@@ -214,7 +239,10 @@ export function MealDetailSheet({ meal, timezone, onClose }: MealDetailSheetProp
                 className="h-11"
                 type="time"
                 value={time}
-                onChange={(event) => setTime(event.target.value)}
+                onChange={(event) => {
+                  setTime(event.target.value)
+                  setDirty(true)
+                }}
                 required
               />
             </div>
