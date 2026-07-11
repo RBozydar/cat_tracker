@@ -142,6 +142,12 @@ def update_meal(meal_id: int, payload: MealUpdate, session: SessionDep) -> MealR
         # Re-snapshot from the food at its current values (the plan's snapshot rule).
         if food_changed:
             food = _loggable_food(session, changes["food_id"])
+            if food.calorie_basis != meal.basis_snapshot and not quantity_changed:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    "New food uses a different calorie basis "
+                    f"({food.calorie_basis.value}); an explicit quantity is required",
+                )
             meal.food_id = food.id
         else:
             food = meal.food

@@ -70,6 +70,24 @@ def test_archiving_clears_cat_defaults_and_reports_affected_cats(client: TestCli
     assert client.get(f"/api/cats/{cat['id']}").json()["default_wet_food_id"] is None
 
 
+def test_patch_rejects_explicit_null_name(client: TestClient) -> None:
+    food = create_food(client)
+    response = client.patch(f"/api/foods/{food['id']}", json={"name": None})
+    assert response.status_code == 422
+
+
+def test_patch_rejects_explicit_null_calorie_basis(client: TestClient) -> None:
+    food = create_food(client)
+    response = client.patch(f"/api/foods/{food['id']}", json={"calorie_basis": None})
+    assert response.status_code == 422
+
+
+def test_patch_rejects_explicit_null_kcal_per_basis(client: TestClient) -> None:
+    food = create_food(client)
+    response = client.patch(f"/api/foods/{food['id']}", json={"kcal_per_basis": None})
+    assert response.status_code == 422
+
+
 def test_cannot_log_archived_food(client: TestClient) -> None:
     food = create_food(client)
     cat = create_cat(client)

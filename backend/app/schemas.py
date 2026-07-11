@@ -10,13 +10,28 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models import CalorieBasis, FoodType
 
 PositiveFloat = Annotated[float, Field(gt=0)]
 OptionalPositiveFloat = Annotated[float | None, Field(gt=0)]
 NonEmptyStr = Annotated[str, Field(min_length=1)]
+
+
+def _reject_explicit_nulls(model: BaseModel, fields: tuple[str, ...]) -> None:
+    """Raise for any of ``fields`` sent as JSON ``null`` in a PATCH payload.
+
+    These fields are typed ``X | None`` only so ``model_dump(exclude_unset=True)``
+    can tell "omitted" (leave unchanged) from "provided"; the columns behind
+    them are NOT NULL, so an explicit ``null`` is a bad request, not a valid
+    "clear this field" — left unchecked it reaches SQLAlchemy as an
+    IntegrityError (500) instead of a 422.
+    """
+
+    nulled = sorted(f for f in fields if f in model.model_fields_set and getattr(model, f) is None)
+    if nulled:
+        raise ValueError(f"{', '.join(nulled)} must not be null")
 
 
 # --- Foods -----------------------------------------------------------------
@@ -35,6 +50,11 @@ class FoodUpdate(BaseModel):
     kcal_per_basis: OptionalPositiveFloat = None
     # Accepted only to reject changes explicitly (type is immutable → 400).
     type: FoodType | None = None
+
+    @model_validator(mode="after")
+    def _no_explicit_nulls(self) -> FoodUpdate:
+        _reject_explicit_nulls(self, ("name", "calorie_basis", "kcal_per_basis"))
+        return self
 
 
 class FoodResponse(BaseModel):
@@ -94,9 +114,16 @@ class CatCreate(BaseModel):
 class CatUpdate(BaseModel):
     name: NonEmptyStr | None = None
     target_kcal: OptionalPositiveFloat = None
+    # goal_weight_kg is genuinely nullable (a trim cat has no goal) — explicit
+    # null here means "clear the goal", so it's intentionally not rejected.
     goal_weight_kg: OptionalPositiveFloat = None
     default_wet_food_id: int | None = None
     default_dry_food_id: int | None = None
+
+    @model_validator(mode="after")
+    def _no_explicit_nulls(self) -> CatUpdate:
+        _reject_explicit_nulls(self, ("name", "target_kcal"))
+        return self
 
 
 class CatResponse(BaseModel):
@@ -126,6 +153,11 @@ class MealUpdate(BaseModel):
     food_id: int | None = None
     quantity: OptionalPositiveFloat = None
     fed_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def _no_explicit_nulls(self) -> MealUpdate:
+        _reject_explicit_nulls(self, ("cat_id", "food_id", "quantity", "fed_at"))
+        return self
 
 
 class MealResponse(BaseModel):

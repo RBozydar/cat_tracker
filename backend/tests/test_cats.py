@@ -56,6 +56,18 @@ def test_patch_can_clear_goal_weight(client: TestClient) -> None:
     assert updated.json()["goal_weight_kg"] is None
 
 
+def test_patch_rejects_explicit_null_name(client: TestClient) -> None:
+    cat = create_cat(client)
+    response = client.patch(f"/api/cats/{cat['id']}", json={"name": None})
+    assert response.status_code == 422
+
+
+def test_patch_rejects_explicit_null_target_kcal(client: TestClient) -> None:
+    cat = create_cat(client)
+    response = client.patch(f"/api/cats/{cat['id']}", json={"target_kcal": None})
+    assert response.status_code == 422
+
+
 def test_weight_upsert_replaces_same_day(client: TestClient) -> None:
     cat = create_cat(client)
     first = client.post(

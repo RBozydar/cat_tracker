@@ -122,3 +122,36 @@ def test_delete_meal(client: TestClient) -> None:
     meal = create_meal(client, cat_id=cat["id"], food_id=food["id"])
     assert client.delete(f"/api/meals/{meal['id']}").status_code == 204
     assert client.get("/api/meals").json() == []
+
+
+def test_patch_rejects_explicit_null_food_id(client: TestClient) -> None:
+    food = create_food(client)
+    cat = create_cat(client)
+    meal = create_meal(client, cat_id=cat["id"], food_id=food["id"])
+    response = client.patch(f"/api/meals/{meal['id']}", json={"food_id": None})
+    assert response.status_code == 422
+
+
+def test_patch_rejects_explicit_null_quantity(client: TestClient) -> None:
+    food = create_food(client)
+    cat = create_cat(client)
+    meal = create_meal(client, cat_id=cat["id"], food_id=food["id"])
+    response = client.patch(f"/api/meals/{meal['id']}", json={"quantity": None})
+    assert response.status_code == 422
+    # The meal is untouched — no IntegrityError, no partial write.
+    assert client.get("/api/meals").json()[0]["quantity"] == 50.0
+
+
+def test_patch_changing_food_basis_without_quantity_is_rejected(client: TestClient) -> None:
+    wet = create_food(client, name="Wet", calorie_basis="PER_100G", kcal_per_basis=80.0)
+    treat = create_food(
+        client, name="Treat", type="TREAT", calorie_basis="PER_PIECE", kcal_per_basis=5.0
+    )
+    cat = create_cat(client)
+    meal = create_meal(client, cat_id=cat["id"], food_id=wet["id"], quantity=50.0)
+
+    # Switching to a per-piece food without an explicit quantity would silently
+    # reinterpret the old gram value (50) as a piece count.
+    response = client.patch(f"/api/meals/{meal['id']}", json={"food_id": treat["id"]})
+    assert response.status_code == 400
+    assert client.get("/api/meals").json()[0]["food_id"] == wet["id"]
