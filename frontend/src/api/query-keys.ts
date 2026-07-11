@@ -95,8 +95,13 @@ export function invalidateAfterWeightMutation(client: QueryClient, catId: number
   void client.invalidateQueries({ queryKey: queryKeys.reports.all })
 }
 
-/** Meal create/update/delete: refreshes history, today/range reports, and re-log suggestions. */
+/**
+ * Meal create/update/delete: refreshes history, today/range reports, and
+ * re-log suggestions. Cats refresh too: a cat's `meal_count` (shown in the
+ * delete-cat warning) is derived from meals and goes stale otherwise.
+ */
 export function invalidateAfterMealMutation(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: queryKeys.cats.all })
   void client.invalidateQueries({ queryKey: queryKeys.meals.all })
   void client.invalidateQueries({ queryKey: queryKeys.reports.all })
 }

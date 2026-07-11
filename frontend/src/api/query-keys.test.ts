@@ -33,10 +33,11 @@ describe('invalidation map', () => {
     expect(keys).toContainEqual(queryKeys.meals.all)
   })
 
-  it('meal mutations refresh meals and reports', () => {
+  it('meal mutations refresh meals, reports, and cats (meal_count on the cat payload)', () => {
     const client = new QueryClient()
     const keys = invalidatedKeyRoots(client, invalidateAfterMealMutation)
     expect(keys).toContainEqual(queryKeys.meals.all)
     expect(keys).toContainEqual(queryKeys.reports.all)
+    expect(keys).toContainEqual(queryKeys.cats.all)
   })
 })
