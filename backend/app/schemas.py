@@ -44,7 +44,7 @@ class FoodCreate(BaseModel):
     calorie_basis: CalorieBasis
     kcal_per_basis: PositiveFloat
     # When true (and type is WET/DRY), point every cat's matching default at this
-    # food in the same transaction. A no-op for TREAT — rejected in the router.
+    # food in the same transaction. Rejected with 400 for TREAT (not a no-op).
     set_default_for_all_cats: bool = False
 
 

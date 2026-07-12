@@ -33,7 +33,7 @@ def compute_target_suggestion(
 ) -> TargetSuggestionResponse:
     """Build the calculator payload, preferring the goal weight when present.
 
-    ``cat_id`` is null in the by-weight onboarding mode; there a weight is always
+    ``cat_id`` is null in the by-weight onboarding mode; where a weight is always
     supplied so the "no weight to compute from" branch is never reached.
     """
 
@@ -46,7 +46,8 @@ def compute_target_suggestion(
         basis_weight = current_weight_kg
         factor = MAINTENANCE_FACTOR
     else:
-        msg = f"Cat {cat_id} has no goal weight and no weight entries to compute a target from"
+        subject = f"Cat {cat_id}" if cat_id is not None else "This cat"
+        msg = f"{subject} has no goal weight and no weight entries to compute a target from"
         raise InsufficientWeightDataError(msg)
 
     rer = _rer_kcal(basis_weight)

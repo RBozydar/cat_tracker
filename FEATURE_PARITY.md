@@ -19,7 +19,7 @@ Design for a handful of cats (~3), not N: cat selection is a single row of butto
 - **Time**: store true UTC everywhere. A single household timezone in backend settings drives "today", day bucketing, and report boundaries. The frontend never sends a timezone.
 - **Units**: metric only — kg for cats, grams/pieces for food, kcal for energy. No lbs support.
 - **Mobile**: installable PWA (manifest + icons), online-only, no offline queue. **Target device: iPhone 13 mini (375 pt-wide viewport)** — every Dashboard interaction must be easy and fast at that size, one-handed. The Dashboard is mobile-first; History and Settings are desktop-first (they must render sanely on the phone, but are designed for and mostly used from desktop).
-- **Theming**: three-way light / dark / system toggle, defaulting to system. System follows `prefers-color-scheme` automatically on iOS and desktop; light and dark are explicit overrides persisted per device. Class-strategy with a system fallback, no third-party theme library. (This reverses the original "system preference only, no toggle" decision — changed by the product owner after living with the app.)
+- **Theming**: three-way light / dark / system toggle, defaulting to system. System follows `prefers-color-scheme` automatically on iOS and desktop; light and dark are explicit overrides persisted per device via a `data-theme` attribute on `<html>`, no third-party theme library. (This reverses the original "system preference only, no toggle" decision — changed by the product owner after living with the app.)
 
 ## Core Model
 
