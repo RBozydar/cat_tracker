@@ -22,6 +22,14 @@ def test_create_with_initial_weight_creates_first_entry(client: TestClient) -> N
     assert weights[0]["weight_kg"] == 4.2
 
 
+def test_create_with_default_foods(client: TestClient) -> None:
+    wet = create_food(client, type="WET")
+    dry = create_food(client, type="DRY", calorie_basis="PER_100G")
+    cat = create_cat(client, default_wet_food_id=wet["id"], default_dry_food_id=dry["id"])
+    assert cat["default_wet_food_id"] == wet["id"]
+    assert cat["default_dry_food_id"] == dry["id"]
+
+
 def test_default_food_must_exist(client: TestClient) -> None:
     response = client.post(
         "/api/cats", json={"name": "X", "target_kcal": 200.0, "default_wet_food_id": 999}

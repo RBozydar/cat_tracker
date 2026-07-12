@@ -210,6 +210,37 @@ frontend never computes calories; it only renders what these return.
   never fall back to the browser's own local date, since the viewer and
   household timezones can differ.
 
+## Theming
+
+Light / dark / system, chosen from a three-way toggle in Settings
+(`frontend/src/components/settings/theme-toggle.tsx`). The mechanism is
+class-strategy with a system fallback, all in `frontend/src/lib/theme.ts` and
+`frontend/src/index.css` — no `next-themes` or other theme library:
+
+- `lib/theme.ts` persists the mode (`light`/`dark`/`system`) in `localStorage`
+  and reflects it onto `<html>` as a `data-theme` attribute — set to
+  `light`/`dark` for an explicit choice, **removed** for `system`. `mode` and
+  the current OS preference live in one module-level store (subscribed to via
+  `useSyncExternalStore`), not per-hook `useState`, so every `useThemeMode`
+  consumer (the Settings toggle, the `Toaster`, ...) re-renders together on a
+  change instead of drifting out of sync until a remount. The store tracks
+  `matchMedia` unconditionally (not just while in system mode), so switching
+  back to system mode is never stale — the CSS itself still does the actual
+  repaint via the media query.
+- `index.css` defines the design tokens so dark applies **both** under
+  `[data-theme="dark"]` (explicit) and under
+  `@media (prefers-color-scheme: dark)` scoped to `:root:not([data-theme])`
+  (system default); light lives on `:root, [data-theme="light"]`. The Tailwind
+  `dark:` variant is redefined to match the same two conditions. Absent/invalid
+  storage ⇒ system, identical to the app's original behavior.
+- A tiny inline script in `index.html` applies the stored mode in `<head>`
+  before first paint, so there's no flash of the wrong theme.
+- Charts follow automatically: their `ChartConfig`s reference `color:
+  var(--chart-N)`, and those CSS variables flip with the tokens above — the
+  chart `theme` key is deliberately not used. The PWA `theme-color` metas still
+  key off `prefers-color-scheme` (OS only), an accepted limitation for the
+  status-bar color.
+
 ## Strictness profiles
 
 - **Backend:** `ruff` lints with 38 rule groups selected (`backend/pyproject.toml`

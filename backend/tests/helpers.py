@@ -16,7 +16,8 @@ def create_food(client: TestClient, **overrides: Any) -> dict[str, Any]:
     payload.update(overrides)
     response = client.post("/api/foods", json=payload)
     assert response.status_code == 201, response.text
-    body: dict[str, Any] = response.json()
+    # POST /foods wraps the food in a FoodMutationResult; unwrap for callers.
+    body: dict[str, Any] = response.json()["food"]
     return body
 
 

@@ -415,6 +415,11 @@ export interface components {
             calorie_basis: components["schemas"]["CalorieBasis"];
             /** Kcal Per Basis */
             kcal_per_basis: number;
+            /**
+             * Set Default For All Cats
+             * @default false
+             */
+            set_default_for_all_cats: boolean;
         };
         /**
          * FoodDeleteResult
@@ -430,6 +435,19 @@ export interface components {
             food: components["schemas"]["FoodResponse"] | null;
             /** Cleared Default For Cat Ids */
             cleared_default_for_cat_ids: number[];
+        };
+        /**
+         * FoodMutationResult
+         * @description Outcome of ``POST /foods`` and ``PATCH /foods/{id}``.
+         *
+         *     ``defaulted_for_cat_count`` is the number of cats whose matching default was
+         *     pointed at this food by ``set_default_for_all_cats`` (0 when the flag was
+         *     not set), so the UI can say "set as default for N cats".
+         */
+        FoodMutationResult: {
+            food: components["schemas"]["FoodResponse"];
+            /** Defaulted For Cat Count */
+            defaulted_for_cat_count: number;
         };
         /** FoodResponse */
         FoodResponse: {
@@ -457,6 +475,11 @@ export interface components {
             /** Kcal Per Basis */
             kcal_per_basis?: number | null;
             type?: components["schemas"]["FoodType"] | null;
+            /**
+             * Set Default For All Cats
+             * @default false
+             */
+            set_default_for_all_cats: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -619,14 +642,17 @@ export interface components {
          * TargetSuggestionResponse
          * @description RER/MER breakdown for the calculator dialog (always a suggestion).
          *
-         *     ``rer_kcal = 70 × basis_weight ** 0.75`` where the basis weight is the goal
+         *     ``rer_kcal = 70 x basis_weight ** 0.75`` where the basis weight is the goal
          *     weight (factor 0.8, weight loss) when a goal is set, otherwise the current
          *     weight (factor 1.2, neutered-adult maintenance).
-         *     ``suggested_target_kcal = rer_kcal × factor``.
+         *     ``suggested_target_kcal = rer_kcal x factor``.
+         *
+         *     ``cat_id`` is null in the by-weight mode (onboarding a cat that does not
+         *     exist yet), where the weights come straight from the query params.
          */
         TargetSuggestionResponse: {
             /** Cat Id */
-            cat_id: number;
+            cat_id: number | null;
             /** Current Weight Kg */
             current_weight_kg: number | null;
             /** Goal Weight Kg */
@@ -1021,7 +1047,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FoodResponse"];
+                    "application/json": components["schemas"]["FoodMutationResult"];
                 };
             };
             /** @description Validation Error */
@@ -1087,7 +1113,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FoodResponse"];
+                    "application/json": components["schemas"]["FoodMutationResult"];
                 };
             };
             /** @description Validation Error */
@@ -1403,8 +1429,10 @@ export interface operations {
     };
     target_suggestion_api_target_suggestion_get: {
         parameters: {
-            query: {
-                cat_id: number;
+            query?: {
+                cat_id?: number | null;
+                weight_kg?: number | null;
+                goal_weight_kg?: number | null;
             };
             header?: never;
             path?: never;

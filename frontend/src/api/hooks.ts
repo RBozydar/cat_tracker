@@ -166,6 +166,22 @@ export function useTargetSuggestion(catId: number, enabled: boolean) {
   })
 }
 
+/**
+ * By-weight calculator for cat onboarding (no cat exists yet). Enabled only once
+ * a positive weight has been entered; keyed on the weights so editing them refetches.
+ */
+export function useTargetSuggestionByWeight(
+  weightKg: number | null,
+  goalWeightKg: number | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: queryKeys.targetSuggestionByWeight(weightKg ?? 0, goalWeightKg ?? undefined),
+    queryFn: () => targetSuggestionApi.getByWeight(weightKg ?? 0, goalWeightKg ?? undefined),
+    enabled: enabled && weightKg !== null && weightKg > 0,
+  })
+}
+
 // --- Meals -----------------------------------------------------------------
 
 /** Meal list. `catId` (camelCase, query-key shape) maps to the API's `cat_id`. */

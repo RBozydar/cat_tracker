@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateFood, useUpdateFood } from '@/api/hooks'
-import type { CalorieBasis, Food, FoodType } from '@/api/types'
+import type { CalorieBasis, Food, FoodMutationResult, FoodType } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { parsePositiveNumber } from '@/lib/format'
 
 const FOOD_TYPE_LABELS: Record<FoodType, string> = {
@@ -31,6 +32,13 @@ const FOOD_TYPE_LABELS: Record<FoodType, string> = {
 const BASIS_LABELS: Record<CalorieBasis, string> = {
   PER_100G: 'per 100 g',
   PER_PIECE: 'per piece',
+}
+
+/** Lowercase noun for the "set as default … food for all cats" toggle (never TREAT). */
+const DEFAULT_FOR_LABEL: Record<FoodType, string> = {
+  WET: 'wet',
+  DRY: 'dry',
+  TREAT: 'treat',
 }
 
 interface FoodFormDialogProps {
@@ -48,6 +56,8 @@ export function FoodFormDialog({ open, onOpenChange, food }: FoodFormDialogProps
   const [type, setType] = useState<FoodType>('WET')
   const [basis, setBasis] = useState<CalorieBasis>('PER_100G')
   const [kcal, setKcal] = useState('')
+  // Action flag, not a stored field: point every cat's default at this food on save.
+  const [setDefaultForAll, setSetDefaultForAll] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Re-seed the form whenever the dialog opens (create: blank; edit: current values).
@@ -57,6 +67,7 @@ export function FoodFormDialog({ open, onOpenChange, food }: FoodFormDialogProps
     setType(food?.type ?? 'WET')
     setBasis(food?.calorie_basis ?? 'PER_100G')
     setKcal(food ? String(food.kcal_per_basis) : '')
+    setSetDefaultForAll(false)
     setError(null)
   }, [open, food])
 
@@ -75,20 +86,42 @@ export function FoodFormDialog({ open, onOpenChange, food }: FoodFormDialogProps
       return
     }
 
-    const onSuccess = () => {
-      toast.success(food ? `${trimmedName} updated` : `${trimmedName} added`)
+    // The type is fixed once a food exists; only WET/DRY foods can be a default.
+    const effectiveType = food?.type ?? type
+    const setDefault = effectiveType !== 'TREAT' && setDefaultForAll
+
+    const onSuccess = (result: FoodMutationResult) => {
+      const description =
+        setDefault && result.defaulted_for_cat_count > 0
+          ? `Set as default ${DEFAULT_FOR_LABEL[effectiveType]} food for ${result.defaulted_for_cat_count} ${result.defaulted_for_cat_count === 1 ? 'cat' : 'cats'}`
+          : undefined
+      toast.success(food ? `${trimmedName} updated` : `${trimmedName} added`, { description })
       onOpenChange(false)
     }
     const onError = (err: Error) => setError(err.message)
 
     if (food) {
       updateFood.mutate(
-        { id: food.id, body: { name: trimmedName, calorie_basis: basis, kcal_per_basis: kcalValue } },
+        {
+          id: food.id,
+          body: {
+            name: trimmedName,
+            calorie_basis: basis,
+            kcal_per_basis: kcalValue,
+            set_default_for_all_cats: setDefault,
+          },
+        },
         { onSuccess, onError },
       )
     } else {
       createFood.mutate(
-        { name: trimmedName, type, calorie_basis: basis, kcal_per_basis: kcalValue },
+        {
+          name: trimmedName,
+          type,
+          calorie_basis: basis,
+          kcal_per_basis: kcalValue,
+          set_default_for_all_cats: setDefault,
+        },
         { onSuccess, onError },
       )
     }
@@ -173,6 +206,19 @@ export function FoodFormDialog({ open, onOpenChange, food }: FoodFormDialogProps
               required
             />
           </div>
+
+          {(food?.type ?? type) !== 'TREAT' && food?.archived_at == null ? (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="food-set-default"
+                checked={setDefaultForAll}
+                onCheckedChange={setSetDefaultForAll}
+              />
+              <Label htmlFor="food-set-default" className="text-sm font-normal">
+                Set as default {DEFAULT_FOR_LABEL[food?.type ?? type]} food for all cats
+              </Label>
+            </div>
+          ) : null}
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 

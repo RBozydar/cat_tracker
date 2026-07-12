@@ -4,13 +4,25 @@
 @import "@fontsource-variable/geist";
 
 /*
- * Dark mode strategy: system `prefers-color-scheme` only (spec: no toggle, no
- * `.dark` class switching). This overrides Tailwind's default `dark:` variant
- * to a media query, and the theme variables below switch under the same media
- * query on :root — so shadcn components (CSS-variable driven) and any `dark:`
- * utilities both follow the OS preference automatically.
+ * Dark mode strategy: class-strategy with a system fallback (three-way toggle —
+ * light / dark / system; see `lib/theme.ts`). The dark theme variables below live
+ * under BOTH `[data-theme="dark"]` (explicit choice) and
+ * `@media (prefers-color-scheme: dark)` scoped to `:root:not([data-theme])`
+ * (system default, no attribute set); light lives on `:root, [data-theme="light"]`.
+ * This `dark:` variant mirrors that so any `dark:` utility follows the same rules:
+ * it matches an explicit dark attribute, or the OS preference when no attribute
+ * is set. shadcn components are CSS-variable driven, so they flip via the vars.
  */
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
 
 @theme inline {
     --font-heading: var(--font-sans);
@@ -55,7 +67,8 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
+:root,
+[data-theme='light'] {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -98,8 +111,51 @@
     --sidebar-ring: oklch(0.708 0 0);
 }
 
+/*
+ * Dark theme tokens, applied by two selectors so they cover both ways of being
+ * dark: `[data-theme='dark']` for the explicit toggle choice, and
+ * `:root:not([data-theme])` under the dark media query for the system default
+ * (no attribute set). The value list is intentionally repeated across the two
+ * rules — plain CSS can't share a declaration block between a bare selector and
+ * one nested in `@media`; keep the two lists in sync.
+ */
+[data-theme='dark'] {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    /* Chart series hues — dark mode: same five hues re-stepped for the dark surface. */
+    --chart-1: #3987e5;
+    --chart-2: #199e70;
+    --chart-3: #d95926;
+    --chart-4: #008300;
+    --chart-5: #9085e9;
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+}
+
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme]) {
         --background: oklch(0.145 0 0);
         --foreground: oklch(0.985 0 0);
         --card: oklch(0.205 0 0);

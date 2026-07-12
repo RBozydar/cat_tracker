@@ -16,6 +16,7 @@ from sqlalchemy import func, select
 from app.config import get_settings
 from app.db import SessionDep
 from app.models import Cat, Food, FoodType, Meal, WeightEntry
+from app.routers.foods import ensure_food_not_archived
 from app.schemas import (
     CatCreate,
     CatResponse,
@@ -36,10 +37,7 @@ def _validate_default_food(session: Session, food_id: int, expected_type: FoodTy
     food = session.get(Food, food_id)
     if food is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Food {food_id} does not exist")
-    if food.archived_at is not None:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, f"Food {food_id} is archived and cannot be a default"
-        )
+    ensure_food_not_archived(food)
     if food.type is not expected_type:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,

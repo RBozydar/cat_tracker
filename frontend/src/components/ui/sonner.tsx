@@ -1,13 +1,15 @@
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { useThemeMode } from "@/lib/theme"
 
-// Diverges from stock shadcn: no `next-themes` (spec locks theming to the
-// system preference). Sonner's `theme="system"` already follows
-// `prefers-color-scheme` on its own.
+// Diverges from stock shadcn: no `next-themes`. The three-way theme toggle
+// (light/dark/system) lives in `lib/theme.ts`; sonner accepts the same mode
+// values, so the toaster follows the chosen theme (and the OS in system mode).
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { mode } = useThemeMode()
   return (
     <Sonner
-      theme="system"
+      theme={mode}
       className="toaster group"
       icons={{
         success: (

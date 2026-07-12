@@ -98,3 +98,52 @@ def test_endpoint_unknown_cat_404(client: TestClient) -> None:
 def test_endpoint_no_goal_no_weight_400(client: TestClient) -> None:
     cat = create_cat(client, target_kcal=200.0)  # no goal, no weigh-in
     assert client.get(f"/api/target-suggestion?cat_id={cat['id']}").status_code == 400
+
+
+# --- By-weight mode (onboarding, no cat yet) -------------------------------
+
+
+def test_endpoint_by_weight_current_basis(client: TestClient) -> None:
+    body = client.get("/api/target-suggestion?weight_kg=5.0").json()
+
+    assert body["cat_id"] is None
+    assert body["basis"] == "CURRENT_WEIGHT"
+    assert body["current_weight_kg"] == 5.0
+    assert body["goal_weight_kg"] is None
+    assert body["factor"] == 1.2
+    assert body["rer_kcal"] == pytest.approx(RER_5KG)
+    assert body["suggested_target_kcal"] == pytest.approx(RER_5KG * 1.2)
+
+
+def test_endpoint_by_weight_with_goal_uses_goal_basis(client: TestClient) -> None:
+    body = client.get("/api/target-suggestion?weight_kg=5.0&goal_weight_kg=4.0").json()
+
+    assert body["cat_id"] is None
+    assert body["basis"] == "GOAL_WEIGHT"
+    assert body["current_weight_kg"] == 5.0
+    assert body["goal_weight_kg"] == 4.0
+    assert body["factor"] == 0.8
+    # RER computed on the GOAL weight (4 kg), not the entered current weight.
+    assert body["rer_kcal"] == pytest.approx(RER_4KG)
+    assert body["suggested_target_kcal"] == pytest.approx(RER_4KG * 0.8)
+
+
+def test_endpoint_requires_a_mode(client: TestClient) -> None:
+    assert client.get("/api/target-suggestion").status_code == 422
+
+
+def test_endpoint_rejects_both_modes(client: TestClient) -> None:
+    cat = create_cat(client, target_kcal=200.0, goal_weight_kg=4.0)
+    response = client.get(f"/api/target-suggestion?cat_id={cat['id']}&weight_kg=5.0")
+    assert response.status_code == 422
+
+
+def test_endpoint_rejects_goal_weight_alongside_cat_id(client: TestClient) -> None:
+    cat = create_cat(client, target_kcal=200.0, goal_weight_kg=4.0)
+    response = client.get(f"/api/target-suggestion?cat_id={cat['id']}&goal_weight_kg=3.5")
+    assert response.status_code == 422
+
+
+def test_endpoint_by_weight_rejects_nonpositive_weight(client: TestClient) -> None:
+    assert client.get("/api/target-suggestion?weight_kg=0").status_code == 422
+    assert client.get("/api/target-suggestion?weight_kg=-1").status_code == 422
