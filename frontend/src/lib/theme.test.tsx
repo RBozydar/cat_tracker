@@ -1,3 +1,5 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import {
   applyThemeMode,
@@ -8,6 +10,7 @@ import {
   subscribeToSystemTheme,
   systemPrefersDark,
   THEME_STORAGE_KEY,
+  useThemeMode,
 } from './theme'
 
 let mediaMatches = false
@@ -95,4 +98,41 @@ test('subscribeToSystemTheme fires on matchMedia change and stops after unsubscr
   unsubscribe()
   changeListeners.forEach((cb) => cb())
   expect(listener).toHaveBeenCalledTimes(1)
+})
+
+function ModeReadout({ testId }: { testId: string }) {
+  const { mode } = useThemeMode()
+  return <span data-testid={testId}>{mode}</span>
+}
+
+function ModeToggleButton() {
+  const { setMode } = useThemeMode()
+  return (
+    <button type="button" onClick={() => setMode('dark')}>
+      Set dark
+    </button>
+  )
+}
+
+// Regression test for the desync bug: separate useThemeMode instances (e.g. the
+// Settings toggle and the Toaster) used to each hold independent useState, so a
+// change from one left the others stale until a remount. All instances now read
+// one shared store via useSyncExternalStore.
+test('a mode change from one useThemeMode consumer is immediately visible to another', async () => {
+  const user = userEvent.setup()
+  render(
+    <>
+      <ModeToggleButton />
+      <ModeReadout testId="a" />
+      <ModeReadout testId="b" />
+    </>,
+  )
+
+  expect(screen.getByTestId('a')).toHaveTextContent('system')
+  expect(screen.getByTestId('b')).toHaveTextContent('system')
+
+  await user.click(screen.getByRole('button', { name: 'Set dark' }))
+
+  expect(screen.getByTestId('a')).toHaveTextContent('dark')
+  expect(screen.getByTestId('b')).toHaveTextContent('dark')
 })

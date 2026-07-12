@@ -219,9 +219,14 @@ class-strategy with a system fallback, all in `frontend/src/lib/theme.ts` and
 
 - `lib/theme.ts` persists the mode (`light`/`dark`/`system`) in `localStorage`
   and reflects it onto `<html>` as a `data-theme` attribute — set to
-  `light`/`dark` for an explicit choice, **removed** for `system`. `useThemeMode`
-  applies it and, while in system mode, subscribes to `matchMedia` so
-  `resolvedTheme` tracks OS changes (the CSS already repaints on its own).
+  `light`/`dark` for an explicit choice, **removed** for `system`. `mode` and
+  the current OS preference live in one module-level store (subscribed to via
+  `useSyncExternalStore`), not per-hook `useState`, so every `useThemeMode`
+  consumer (the Settings toggle, the `Toaster`, ...) re-renders together on a
+  change instead of drifting out of sync until a remount. The store tracks
+  `matchMedia` unconditionally (not just while in system mode), so switching
+  back to system mode is never stale — the CSS itself still does the actual
+  repaint via the media query.
 - `index.css` defines the design tokens so dark applies **both** under
   `[data-theme="dark"]` (explicit) and under
   `@media (prefers-color-scheme: dark)` scoped to `:root:not([data-theme])`

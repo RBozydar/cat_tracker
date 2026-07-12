@@ -5,14 +5,18 @@
  * The CSS (see `index.css`) is class-strategy with a system fallback: dark tokens
  * live under both `[data-theme="dark"]` and `@media (prefers-color-scheme: dark)`
  * scoped to `:root:not([data-theme])`. So `system` mode means "no attribute" and
- * the media query drives the flip automatically — no JS repaint needed. The
- * `matchMedia` subscription here exists only to keep React state (`resolvedTheme`)
- * in sync when the OS preference changes while in system mode.
+ * the media query drives the flip automatically — no JS repaint needed.
+ *
+ * `mode`/`systemDark` live in one module-level store (below `useThemeMode`)
+ * rather than per-hook `useState`, so every consumer (the Settings toggle, the
+ * Toaster, ...) re-renders together on a change instead of drifting out of sync
+ * until a remount. `useSyncExternalStore` is React's binding for exactly this
+ * shape of external mutable state.
  *
  * `index.html` runs a tiny inline copy of {@link applyThemeMode}'s logic in
  * `<head>` before paint so the stored theme lands without a flash.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type ResolvedTheme = 'light' | 'dark'
@@ -53,12 +57,6 @@ export function persistThemeMode(mode: ThemeMode): void {
   }
 }
 
-/** Persist and apply a mode in one step (imperative callers and tests). */
-export function setThemeMode(mode: ThemeMode): void {
-  persistThemeMode(mode)
-  applyThemeMode(mode)
-}
-
 export function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
@@ -78,33 +76,76 @@ export function subscribeToSystemTheme(listener: () => void): () => void {
   return () => mql.removeEventListener('change', listener)
 }
 
+// --- Shared store ------------------------------------------------------------
+//
+// One `mode`/`systemDark` pair for the whole app. `subscribe` lazily (re)syncs
+// from localStorage and starts tracking `matchMedia` the moment the *first*
+// consumer mounts, and tears the `matchMedia` listener down once the *last* one
+// unmounts — so `systemDark` is never stale (fixes the "switch back to system
+// mode shows the wrong theme until the OS preference changes again" case: it's
+// now tracked unconditionally, not just while `mode === 'system'`), and nothing
+// leaks a `matchMedia` subscription for the lifetime of the page when no
+// consumer is mounted.
+type Listener = () => void
+
+let mode: ThemeMode = getStoredThemeMode()
+let systemDark = false
+let unsubscribeFromSystemTheme: (() => void) | null = null
+const listeners = new Set<Listener>()
+
+function notify(): void {
+  listeners.forEach((listener) => listener())
+}
+
+function subscribe(listener: Listener): () => void {
+  if (listeners.size === 0) {
+    mode = getStoredThemeMode()
+    systemDark = systemPrefersDark()
+    unsubscribeFromSystemTheme = subscribeToSystemTheme(() => {
+      systemDark = systemPrefersDark()
+      notify()
+    })
+  }
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+    if (listeners.size === 0 && unsubscribeFromSystemTheme) {
+      unsubscribeFromSystemTheme()
+      unsubscribeFromSystemTheme = null
+    }
+  }
+}
+
+function getModeSnapshot(): ThemeMode {
+  return mode
+}
+
+function getSystemDarkSnapshot(): boolean {
+  return systemDark
+}
+
+/** Persist, apply, and broadcast a mode to every `useThemeMode` consumer. */
+export function setThemeMode(next: ThemeMode): void {
+  persistThemeMode(next)
+  applyThemeMode(next)
+  mode = next
+  notify()
+}
+
 /**
  * React binding for the theme: current `mode`, the `resolvedTheme` it renders as,
- * and a `setMode` that persists the choice. Applies the mode to `<html>` on mount
- * and on change; while in system mode, re-renders when the OS preference flips.
+ * and a `setMode` that persists the choice. Every instance reads the same shared
+ * store, so a change made through one component (e.g. the Settings toggle) is
+ * immediately visible to every other mounted consumer (e.g. the Toaster).
  */
 export function useThemeMode(): {
   mode: ThemeMode
   resolvedTheme: ResolvedTheme
   setMode: (mode: ThemeMode) => void
 } {
-  const [mode, setModeState] = useState<ThemeMode>(getStoredThemeMode)
-  const [systemDark, setSystemDark] = useState<boolean>(systemPrefersDark)
-
-  useEffect(() => {
-    applyThemeMode(mode)
-  }, [mode])
-
-  useEffect(() => {
-    if (mode !== 'system') return undefined
-    return subscribeToSystemTheme(() => setSystemDark(systemPrefersDark()))
-  }, [mode])
-
-  const setMode = useCallback((next: ThemeMode) => {
-    persistThemeMode(next)
-    setModeState(next)
-  }, [])
-
-  const resolvedTheme: ResolvedTheme = mode === 'system' ? (systemDark ? 'dark' : 'light') : mode
-  return { mode, resolvedTheme, setMode }
+  const currentMode = useSyncExternalStore(subscribe, getModeSnapshot)
+  const currentSystemDark = useSyncExternalStore(subscribe, getSystemDarkSnapshot)
+  const resolvedTheme: ResolvedTheme =
+    currentMode === 'system' ? (currentSystemDark ? 'dark' : 'light') : currentMode
+  return { mode: currentMode, resolvedTheme, setMode: setThemeMode }
 }
