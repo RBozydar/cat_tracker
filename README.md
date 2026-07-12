@@ -9,7 +9,8 @@ A **FastAPI + SQLite backend** owns the canonical data model and all
 calorie/report math; a **Vite + React (shadcn/ui) SPA** renders it. Both ship in
 a **single container** that serves the API and the built SPA behind Traefik.
 
-See [`FEATURE_PARITY.md`](FEATURE_PARITY.md) for the product spec and
+See [`FEATURE_PARITY.md`](FEATURE_PARITY.md) for the product spec,
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how it works today, and
 [`docs/plans/`](docs/plans/) for the rebuild plan.
 
 Two design rules drive the whole model, and exist to fix the two structural
@@ -69,7 +70,7 @@ Checks (also run in CI):
 uv run ruff check .          # lint
 uv run ruff format --check . # formatting
 uv run mypy app              # strict type-check
-uv run pytest                # 81 tests: services math, snapshot/tz invariants, routers
+uv run pytest                # 97 tests: services math, snapshot/tz invariants, routers
 ```
 
 ### Frontend (from `frontend/`)
@@ -77,7 +78,7 @@ uv run pytest                # 81 tests: services math, snapshot/tz invariants, 
 ```bash
 pnpm install
 pnpm dev       # Vite dev server; proxies /api to the backend on :8137
-pnpm test      # vitest (30 tests)
+pnpm test      # vitest (71 tests)
 pnpm build     # tsc -b && vite build → frontend/dist
 ```
 
@@ -120,6 +121,34 @@ client-routing fallback, and returns JSON 404 for unknown `/api/*` paths.
 (`DATABASE_URL=sqlite:////data/cat_tracker.db`), and the `/api/health`
 healthcheck. `APP_TIMEZONE` (`Europe/Warsaw` in compose) seeds the household
 timezone on first run.
+
+## Environment variables
+
+**Application (backend, read via `app/config.py`):**
+
+- `DATABASE_URL` — SQLAlchemy URL. Dev default `sqlite:///./cat_tracker.db`;
+  `docker-compose.yml` sets `sqlite:////data/cat_tracker.db` (the `cat_db`
+  volume).
+- `APP_TIMEZONE` — IANA timezone that seeds the household-settings singleton
+  **on first run only**; later changes go through Settings in the UI, not
+  this var. Dev default `UTC`; compose sets `Europe/Warsaw`.
+- `FRONTEND_DIST` — directory holding the built SPA. Correct by default in
+  both dev and the container; rarely needs overriding.
+
+**Frontend:** none. There are no runtime frontend env vars — the SPA always
+calls `/api` on its own origin, in dev (via the Vite proxy) and in the
+container alike.
+
+**Deploy-time only** (`docker-compose.yml` variable interpolation on the
+Traefik host — never reaches the running app):
+
+- `HOST_SUBDOMAIN` — feeds two optional Traefik host-rule variants
+  (`cattrack.local.${HOST_SUBDOMAIN}.bozydar.me`,
+  `cattrack.${HOST_SUBDOMAIN}.bozydar.me`) alongside two literal hostnames
+  that always work. `docker compose` auto-loads a `.env` file next to
+  `docker-compose.yml` on the deploy host — see [`.env.example`](.env.example).
+  Leaving it unset produces a harmless compose warning and dead double-dot
+  rule variants; the two literal hostnames keep working either way.
 
 ## Deploy
 
