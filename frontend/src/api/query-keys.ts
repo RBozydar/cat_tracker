@@ -50,6 +50,9 @@ export const queryKeys = {
     all: ['settings'] as const,
   },
   targetSuggestion: (catId: number) => ['target-suggestion', catId] as const,
+  // Onboarding calculator, keyed on the entered weights (no cat yet).
+  targetSuggestionByWeight: (weightKg: number, goalWeightKg?: number) =>
+    ['target-suggestion', 'by-weight', weightKg, goalWeightKg ?? null] as const,
   reports: {
     all: ['reports'] as const,
     today: () => ['reports', 'today'] as const,

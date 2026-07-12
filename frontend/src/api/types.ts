@@ -15,6 +15,7 @@ export type Food = Schemas['FoodResponse']
 export type FoodCreate = Schemas['FoodCreate']
 export type FoodUpdate = Schemas['FoodUpdate']
 export type FoodDeleteResult = Schemas['FoodDeleteResult']
+export type FoodMutationResult = Schemas['FoodMutationResult']
 
 export type Cat = Schemas['CatResponse']
 export type CatCreate = Schemas['CatCreate']

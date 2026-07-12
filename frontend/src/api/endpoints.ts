@@ -13,6 +13,7 @@ import type {
   Food,
   FoodCreate,
   FoodDeleteResult,
+  FoodMutationResult,
   FoodUpdate,
   Meal,
   MealCreate,
@@ -29,8 +30,8 @@ import type {
 export const foodsApi = {
   list: (includeArchived = false) =>
     api.get<Food[]>(`/foods${queryString({ include_archived: includeArchived || undefined })}`),
-  create: (body: FoodCreate) => api.post<Food>('/foods', body),
-  update: (id: number, body: FoodUpdate) => api.patch<Food>(`/foods/${id}`, body),
+  create: (body: FoodCreate) => api.post<FoodMutationResult>('/foods', body),
+  update: (id: number, body: FoodUpdate) => api.patch<FoodMutationResult>(`/foods/${id}`, body),
   remove: (id: number) => api.delete<FoodDeleteResult>(`/foods/${id}`),
 }
 
@@ -74,4 +75,9 @@ export const settingsApi = {
 export const targetSuggestionApi = {
   get: (catId: number) =>
     api.get<TargetSuggestion>(`/target-suggestion${queryString({ cat_id: catId })}`),
+  // Onboarding mode: compute from explicit weights before a cat exists.
+  getByWeight: (weightKg: number, goalWeightKg?: number) =>
+    api.get<TargetSuggestion>(
+      `/target-suggestion${queryString({ weight_kg: weightKg, goal_weight_kg: goalWeightKg })}`,
+    ),
 }
