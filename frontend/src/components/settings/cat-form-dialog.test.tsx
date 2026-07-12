@@ -1,7 +1,10 @@
-import { screen, waitFor } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
+import { createQueryClient } from '@/api/query-client'
 import type { Food, TargetSuggestion } from '@/api/types'
+import { Toaster } from '@/components/ui/sonner'
 import { installFetchMock } from '@/test/mock-api'
 import { renderWithProviders } from '@/test/render'
 import { CatFormDialog } from './cat-form-dialog'
@@ -153,4 +156,54 @@ test('an empty food library shows the add-foods empty state for both selects', a
   renderWithProviders(<CatFormDialog open onOpenChange={() => {}} />)
 
   expect(await screen.findAllByText('Add foods in Settings first')).toHaveLength(2)
+})
+
+test('clearing the weight after a suggestion was applied resets the target', async () => {
+  installFetchMock([
+    { method: 'GET', path: '/api/foods', body: [] },
+    { method: 'GET', path: '/api/target-suggestion', body: suggestion },
+  ])
+
+  renderWithProviders(<CatFormDialog open onOpenChange={() => {}} />)
+
+  const weightInput = screen.getByLabelText('Initial weight (kg)')
+  await userEvent.type(weightInput, '5')
+  await waitFor(() => expect(screen.getByLabelText('Daily target (kcal)')).toHaveValue(281))
+
+  // Removing the weight removes the basis for the suggestion — the stale
+  // calculated target must not linger and get submitted for a weight that's no
+  // longer entered.
+  await userEvent.clear(weightInput)
+  await waitFor(() => expect(screen.getByLabelText('Daily target (kcal)')).toHaveValue(null))
+})
+
+test('reopening the create dialog after entering a weight does not reapply a stale suggestion', async () => {
+  installFetchMock([
+    { method: 'GET', path: '/api/foods', body: [] },
+    { method: 'GET', path: '/api/target-suggestion', body: suggestion },
+  ])
+
+  // Mirrors how CatsCard mounts the "Add cat" dialog: always mounted, only
+  // `open` toggles — so the component instance (and its state) persists across
+  // a close/reopen, which is what the stale-suggestion regression depends on.
+  const queryClient = createQueryClient()
+  function Harness({ open }: { open: boolean }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <CatFormDialog open={open} onOpenChange={() => {}} />
+        <Toaster />
+      </QueryClientProvider>
+    )
+  }
+
+  const { rerender } = render(<Harness open />)
+
+  await userEvent.type(screen.getByLabelText('Initial weight (kg)'), '5')
+  await waitFor(() => expect(screen.getByLabelText('Daily target (kcal)')).toHaveValue(281))
+
+  rerender(<Harness open={false} />)
+  rerender(<Harness open />)
+
+  expect(screen.getByLabelText('Initial weight (kg)')).toHaveValue(null)
+  expect(screen.getByLabelText('Daily target (kcal)')).toHaveValue(null)
 })

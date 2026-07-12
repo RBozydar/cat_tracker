@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useCreateCat, useFoods, useTargetSuggestionByWeight, useUpdateCat } from '@/api/hooks'
 import type { Cat, FoodType } from '@/api/types'
@@ -61,18 +61,30 @@ export function CatFormDialog({ open, onOpenChange, cat }: CatFormDialogProps) {
     setError(null)
   }, [open, cat])
 
+  // True only on the render where `open` flips to true. The reset effect above
+  // clears `initialWeight` on reopen, but effects run after render — without this
+  // guard, this render's suggestion query could still fire with the *previous*
+  // session's `initialWeight` (and, on a cache hit, synchronously return its
+  // cached suggestion), racing the reset and leaving a stale target (see U8).
+  // Self-clears every render since `prevOpenRef.current` catches up immediately.
+  const prevOpenRef = useRef(open)
+  const justOpened = open && !prevOpenRef.current
+  prevOpenRef.current = open
+
   // Onboarding calculator: once a weight is entered (create mode only), fetch the
   // RER/MER suggestion from the entered weight and optional goal weight.
-  const weightForSuggestion = cat ? null : parsePositiveNumber(initialWeight)
+  const weightForSuggestion = cat || justOpened ? null : parsePositiveNumber(initialWeight)
   const goalForSuggestion = goalWeight.trim() === '' ? null : parsePositiveNumber(goalWeight)
   const suggestion = useTargetSuggestionByWeight(weightForSuggestion, goalForSuggestion, open && !cat)
   const suggestedTarget = suggestion.data ? Math.round(suggestion.data.suggested_target_kcal) : null
 
   // Prefill the target from the suggestion while the user hasn't typed their own —
-  // keeps it in sync as they adjust the weight, but never clobbers a manual value.
+  // keeps it in sync as they adjust the weight, and clears back to empty once the
+  // weight (and so the suggestion) is removed, so a stale calculated target can
+  // never be submitted for a weight that's no longer entered.
   useEffect(() => {
-    if (cat || targetTouched || suggestedTarget === null) return
-    setTargetKcal(String(suggestedTarget))
+    if (cat || targetTouched) return
+    setTargetKcal(suggestedTarget !== null ? String(suggestedTarget) : '')
   }, [cat, targetTouched, suggestedTarget])
 
   const pending = createCat.isPending || updateCat.isPending
@@ -150,25 +162,31 @@ export function CatFormDialog({ open, onOpenChange, cat }: CatFormDialogProps) {
     const options = foodOptions(type)
     return (
       <div className="grid gap-2">
-        <Label htmlFor={id}>{label}</Label>
         {options.length === 0 ? (
-          <p id={id} className="flex min-h-9 items-center text-sm text-muted-foreground">
-            Add foods in Settings first
-          </p>
+          <>
+            {/* No htmlFor: there's no interactive control to associate with yet. */}
+            <Label>{label}</Label>
+            <p className="flex min-h-9 items-center text-sm text-muted-foreground">
+              Add foods in Settings first
+            </p>
+          </>
         ) : (
-          <Select value={value} onValueChange={onValueChange}>
-            <SelectTrigger id={id} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>None</SelectItem>
-              {options.map((food) => (
-                <SelectItem key={food.id} value={String(food.id)}>
-                  {food.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <>
+            <Label htmlFor={id}>{label}</Label>
+            <Select value={value} onValueChange={onValueChange}>
+              <SelectTrigger id={id} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>None</SelectItem>
+                {options.map((food) => (
+                  <SelectItem key={food.id} value={String(food.id)}>
+                    {food.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
         )}
       </div>
     )
