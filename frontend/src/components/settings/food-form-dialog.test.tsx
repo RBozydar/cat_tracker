@@ -76,3 +76,14 @@ test('editing a dry food labels the toggle for the dry default', async () => {
     screen.getByRole('switch', { name: /set as default dry food for all cats/i }),
   ).toBeInTheDocument()
 })
+
+test('the default-for-all-cats toggle is hidden for an archived food', async () => {
+  installFetchMock([])
+
+  const archived: Food = { ...dry, archived_at: '2026-01-01T00:00:00Z' }
+  renderWithProviders(<FoodFormDialog open onOpenChange={vi.fn()} food={archived} />)
+
+  // Setting the default while archived would 400 in the router and roll back
+  // the whole submit, including otherwise-valid field changes — hide it instead.
+  expect(screen.queryByRole('switch', { name: /set as default/i })).not.toBeInTheDocument()
+})

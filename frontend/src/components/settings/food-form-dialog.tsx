@@ -207,7 +207,7 @@ export function FoodFormDialog({ open, onOpenChange, food }: FoodFormDialogProps
             />
           </div>
 
-          {(food?.type ?? type) !== 'TREAT' ? (
+          {(food?.type ?? type) !== 'TREAT' && food?.archived_at == null ? (
             <div className="flex items-center gap-2">
               <Switch
                 id="food-set-default"
