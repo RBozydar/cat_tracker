@@ -52,9 +52,16 @@ pnpm gen:api     # regenerate frontend/src/api/types.gen.ts from the backend's O
 3. **Regenerate `types.gen.ts` after any backend schema change** (`pnpm gen:api`
    from `frontend/`, backend venv synced first). A clean tree should produce
    zero diff — if it doesn't, the frontend types are stale.
-4. **Dark mode is `prefers-color-scheme` only.** No manual toggle, no `.dark`
-   class switching — media-strategy dark mode is a locked decision, not an
-   oversight.
+4. **Theme is a three-way toggle — light / dark / system, defaulting to
+   system.** Class-strategy with a system fallback (`frontend/src/lib/theme.ts`):
+   a `data-theme` attribute on `<html>` for an explicit light/dark choice,
+   *absent* for system, where the `prefers-color-scheme` media query drives the
+   flip. Dark tokens live under **both** `[data-theme="dark"]` and that media
+   query scoped to `:root:not([data-theme])`; light under
+   `:root, [data-theme="light"]` (`frontend/src/index.css`). No third-party theme
+   library (no `next-themes`). This deliberately **reverses** the earlier
+   media-only, no-toggle decision — the product owner changed it after living
+   with the app; do not "fix" the toggle away.
 5. **Metric only.** kg, grams/pieces, kcal. No lbs, no unit conversion layer.
 6. **The Out of Scope list in `FEATURE_PARITY.md` is binding**: no auth, no
    per-cat meals-per-day, no offline/sync, no notifications/photos, no

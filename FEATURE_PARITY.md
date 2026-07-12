@@ -19,7 +19,7 @@ Design for a handful of cats (~3), not N: cat selection is a single row of butto
 - **Time**: store true UTC everywhere. A single household timezone in backend settings drives "today", day bucketing, and report boundaries. The frontend never sends a timezone.
 - **Units**: metric only — kg for cats, grams/pieces for food, kcal for energy. No lbs support.
 - **Mobile**: installable PWA (manifest + icons), online-only, no offline queue. **Target device: iPhone 13 mini (375 pt-wide viewport)** — every Dashboard interaction must be easy and fast at that size, one-handed. The Dashboard is mobile-first; History and Settings are desktop-first (they must render sanely on the phone, but are designed for and mostly used from desktop).
-- **Theming**: dark/light follows the system preference (`prefers-color-scheme`) automatically on iOS and desktop. No manual theme toggle.
+- **Theming**: three-way light / dark / system toggle, defaulting to system. System follows `prefers-color-scheme` automatically on iOS and desktop; light and dark are explicit overrides persisted per device. Class-strategy with a system fallback, no third-party theme library. (This reverses the original "system preference only, no toggle" decision — changed by the product owner after living with the app.)
 
 ## Core Model
 
@@ -84,6 +84,7 @@ Design for a handful of cats (~3), not N: cat selection is a single row of butto
 
 - Suggest a daily target from veterinary formulas: RER = 70 × (kg)^0.75, applied to **goal weight** with a weight-loss factor (≈0.8 × RER) when a goal is set, or maintenance factor on current weight when not.
 - Always a suggestion — the stored target is editable and can ignore the calculator entirely.
+- Available two ways: for an existing cat (from its stored goal/current weight), and **at cat creation** — once a weight is entered in the Add-cat form the suggestion is computed from that entered weight (and optional goal weight, before the cat exists) and can prefill the target. Same endpoint (`target-suggestion`), which accepts either a `cat_id` or an explicit `weight_kg`.
 
 ### Weight Tracking
 
@@ -111,8 +112,9 @@ Design for a handful of cats (~3), not N: cat selection is a single row of butto
 
 ### Settings
 
-- Manage cats (including goal weight and default foods).
-- Manage the food library (all three types, either calorie basis).
+- Manage cats (including goal weight and default foods). Default wet/dry foods are optional and can be chosen **at cat creation**, not only when editing (an empty library shows an "add foods in Settings first" hint and never blocks creating the cat).
+- Manage the food library (all three types, either calorie basis). When adding or editing a **wet or dry** food, an optional "set as default for all cats" affordance points every cat's matching default at that food in one action (never offered for treats; a success message reports how many cats were updated). Existing meal snapshots are untouched.
+- Theme toggle (light / dark / system) lives in the household card.
 - Portion suggestion settings and household timezone.
 
 ## Pages
@@ -149,7 +151,7 @@ Design for a handful of cats (~3), not N: cat selection is a single row of butto
 
 ## Parity Chrome (keep)
 
-- Dark mode via system preference auto-detect (no toggle — see Theming decision)
+- Dark mode with a three-way light / dark / system toggle, defaulting to system preference auto-detect (see Theming decision)
 - Seed data for development
 - Single clean CI workflow: backend (ruff, mypy, pytest) + frontend (tsc, vitest, build) + docker image build. Replaces the old node.js/CodeQL/Codacy/docker workflows.
 
