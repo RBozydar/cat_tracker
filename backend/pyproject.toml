@@ -1,0 +1,165 @@
+[project]
+name = "cat-tracker-backend"
+version = "0.0.0"
+description = "Cat Tracker backend: FastAPI API + calorie/report math, serves the built SPA."
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic-settings>=2.5",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8.0",
+    "httpx>=0.27",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["app", "tests"]
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "YTT",    # flake8-2020 (sys.version checks)
+    "ASYNC",  # flake8-async (no-op today: all endpoints are sync, kept for when that changes)
+    "S",      # flake8-bandit (security)
+    "BLE",    # flake8-blind-except
+    "B",      # flake8-bugbear
+    "A",      # flake8-builtins (shadowing built-ins)
+    "COM",    # flake8-commas
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez (timezone awareness — the app's whole time convention)
+    "T10",    # flake8-debugger
+    "EM",     # flake8-errmsg (exception message formatting)
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "G",      # flake8-logging-format
+    "PIE",    # flake8-pie (misc best practices)
+    "T20",    # flake8-print (no print statements in production)
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SLF",    # flake8-self (private member access)
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TC",     # flake8-type-checking (TYPE_CHECKING blocks)
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate (commented-out code)
+    "PGH",    # pygrep-hooks
+    "PL",     # Pylint
+    "TRY",    # tryceratops (exception handling)
+    "FLY",    # flynt (f-string conversion)
+    "PERF",   # Perflint (performance anti-patterns)
+    "RUF",    # Ruff-specific rules
+]
+
+ignore = [
+  # Formatter conflicts
+  "COM812",   # Missing trailing comma
+  "ISC001",   # Single line implicit string concatenation
+]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/env.py" = ["E402"]
+
+# Dev-only seed script: prints are the intended output, not stray debugging.
+"seed.py" = ["T201"]
+
+# Tests: asserts are the point, magic values are test data, fixtures are
+# injected via unused args, and FastAPI TestClient calls carry hardcoded
+# demo values that look like secrets to bandit.
+"tests/**/*.py" = [
+  "S101",     # assert allowed
+  "PLR2004",  # magic values allowed
+  "ARG001",   # unused fixture arguments allowed
+]
+
+# TC001/TC002/TC003 (move type-only imports under `if TYPE_CHECKING:`) is unsafe
+# to apply wherever FastAPI/Pydantic/SQLAlchemy resolve the annotation at
+# runtime — a TYPE_CHECKING-only import is never executed, so the name would be
+# missing when they do. Each entry below is a case of that, not a style choice:
+#
+# - `SessionDep` (app.db) is the `Annotated[Session, Depends(...)]` alias every
+#   route depends on; FastAPI inspects the live annotation to wire the DB
+#   session dependency.
+# - Route return-type annotations (TodayReport/RangeReport/ComparisonReport,
+#   TargetSuggestionResponse) double as FastAPI's implicit `response_model`;
+#   it builds the response schema from the real class at route registration.
+# - `date` as a query-param annotation on /reports/range and /reports/comparison
+#   is what tells FastAPI to parse and validate the query string as a date.
+"app/routers/cats.py" = ["TC001"]
+"app/routers/foods.py" = ["TC001"]
+"app/routers/meals.py" = ["TC001"]
+"app/routers/settings.py" = ["TC001"]
+"app/routers/target.py" = ["TC001"]
+"app/routers/reports.py" = ["TC001", "TC003"]
+
+# Pydantic builds each model's validator/serializer from the real field types
+# at class-definition time; a TYPE_CHECKING-only import leaves those names
+# unresolved when pydantic-core builds the schema.
+"app/schemas.py" = ["TC001", "TC003"]
+
+# SQLAlchemy's declarative `Mapped[date]`/`Mapped[datetime | None]` columns
+# resolve the annotation at mapper-configuration time to infer the SQL column
+# type; same runtime-resolution requirement as the Pydantic case above.
+"app/models.py" = ["TC003"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.pylint]
+max-args = 8
+max-branches = 15
+max-returns = 6
+max-statements = 60
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+mypy_path = "."
+plugins = ["pydantic.mypy"]
+warn_unreachable = true
+
+# Output settings
+pretty = true
+show_error_codes = true
+show_column_numbers = true
+show_error_context = true
+
+files = ["app", "tests"]
+exclude = ["alembic/"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"

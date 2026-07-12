@@ -1,53 +1,44 @@
-FROM node:22-slim AS builder
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-WORKDIR /app
+# syntax=docker/dockerfile:1
 
-# Copy package files first to leverage Docker cache
-COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends sqlite3 openssl ca-certificates && \
-    pnpm install --prod && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-RUN pnpm install
-
-# Then copy the rest
-COPY . .
-ENV DATABASE_URL=file:/data/dev.db
-RUN pnpm prisma generate
+# ---- Stage 1: build the SPA (frontend/dist) ----
+FROM node:22-alpine AS frontend
+WORKDIR /app/frontend
+RUN npm install -g pnpm@11.11.0
+# Install deps first for layer caching, then build.
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend/ ./
 RUN pnpm build
 
-FROM node:20-slim AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-# ENV DATABASE_URL="file:/data/dev.db"
+# ---- Stage 2: Python runtime (API + built SPA) ----
+FROM python:3.14-slim AS runtime
+COPY --from=ghcr.io/astral-sh/uv:0.9.8 /uv /uvx /bin/
 
-# Only copy production necessities
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package.json ./pnpm-lock.yaml* ./
-COPY scripts/start.sh ./
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/app/backend/.venv \
+    PATH="/app/backend/.venv/bin:$PATH"
 
-# Install only production deps
-RUN corepack enable && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends sqlite3 openssl ca-certificates && \
-    pnpm install --prod && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# curl backs the /api/health healthcheck (compose + HEALTHCHECK below).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /data && chmod 777 /data
-RUN chmod +x ./start.sh
+WORKDIR /app/backend
+
+# Sync runtime deps first (cache layer keyed on the lockfile only).
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-dev
+
+COPY backend/ ./
+# The app serves the SPA from <repo>/frontend/dist, which resolves to
+# /app/frontend/dist given the /app/backend working tree (see app/config.py).
+COPY --from=frontend /app/frontend/dist /app/frontend/dist
+
+RUN chmod +x docker-entrypoint.sh && mkdir -p /data
 
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s \
-  CMD curl -f http://localhost:3000/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
 
-CMD ["./start.sh"] 
+ENTRYPOINT ["/app/backend/docker-entrypoint.sh"]
