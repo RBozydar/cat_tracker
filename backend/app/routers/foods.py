@@ -36,6 +36,20 @@ def _get_food_or_404(session: Session, food_id: int) -> Food:
     return food
 
 
+def ensure_food_not_archived(food: Food) -> None:
+    """Shared 400 guard: an archived food can never become a cat's default.
+
+    Used here and by ``cats._validate_default_food`` so the bulk (set-for-all)
+    and per-cat default paths can't drift out of sync on this rule.
+    """
+
+    if food.archived_at is not None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Food {food.id} is archived and cannot be a default",
+        )
+
+
 def _apply_default_for_all_cats(session: Session, food: Food) -> int:
     """Point every cat's matching (wet/dry) default at ``food``; return the count.
 
@@ -50,11 +64,7 @@ def _apply_default_for_all_cats(session: Session, food: Food) -> int:
             status.HTTP_400_BAD_REQUEST,
             "A treat cannot be set as a default wet/dry food",
         )
-    if food.archived_at is not None:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            f"Food {food.id} is archived and cannot be a default",
-        )
+    ensure_food_not_archived(food)
 
     cats = session.scalars(select(Cat)).all()
     for cat in cats:
