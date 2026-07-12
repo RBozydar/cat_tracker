@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { ThemeToggle } from './theme-toggle'
 
 export function HouseholdCard() {
   const settings = useSettings()
@@ -86,6 +87,9 @@ export function HouseholdCard() {
           each cat&apos;s daily target across the meals per day.
         </CardDescription>
       </CardHeader>
+      <CardContent>
+        <ThemeToggle />
+      </CardContent>
       {settings.isPending ? (
         <CardContent>
           <p className="py-4 text-sm text-muted-foreground">Loading settings…</p>

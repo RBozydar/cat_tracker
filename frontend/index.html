@@ -7,6 +7,11 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Feeding, calorie, and weight tracker for the household cats." />
+    <!--
+      theme-color tracks the OS preference only (media attribute). The in-app
+      three-way toggle (light/dark/system) overrides the page tokens but not this
+      PWA status-bar color; that's an accepted limitation — see FEATURE_PARITY.md.
+    -->
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -14,6 +19,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Cat Tracker" />
     <title>Cat Tracker</title>
+    <script>
+      // Apply the stored theme before first paint to avoid a flash. Mirrors
+      // lib/theme.ts: 'light'/'dark' set data-theme; 'system' or absent leaves it
+      // off so the prefers-color-scheme media query in index.css takes over.
+      (function () {
+        try {
+          var mode = localStorage.getItem('cat-tracker-theme')
+          if (mode === 'light' || mode === 'dark') {
+            document.documentElement.setAttribute('data-theme', mode)
+          }
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
