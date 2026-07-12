@@ -43,6 +43,9 @@ class FoodCreate(BaseModel):
     type: FoodType
     calorie_basis: CalorieBasis
     kcal_per_basis: PositiveFloat
+    # When true (and type is WET/DRY), point every cat's matching default at this
+    # food in the same transaction. A no-op for TREAT — rejected in the router.
+    set_default_for_all_cats: bool = False
 
 
 class FoodUpdate(BaseModel):
@@ -51,6 +54,8 @@ class FoodUpdate(BaseModel):
     kcal_per_basis: OptionalPositiveFloat = None
     # Accepted only to reject changes explicitly (type is immutable → 400).
     type: FoodType | None = None
+    # See FoodCreate; on edit the food's type/archived state is checked live.
+    set_default_for_all_cats: bool = False
 
     @model_validator(mode="after")
     def _no_explicit_nulls(self) -> FoodUpdate:
@@ -80,6 +85,18 @@ class FoodDeleteResult(BaseModel):
     archived: bool
     food: FoodResponse | None
     cleared_default_for_cat_ids: list[int]
+
+
+class FoodMutationResult(BaseModel):
+    """Outcome of ``POST /foods`` and ``PATCH /foods/{id}``.
+
+    ``defaulted_for_cat_count`` is the number of cats whose matching default was
+    pointed at this food by ``set_default_for_all_cats`` (0 when the flag was
+    not set), so the UI can say "set as default for N cats".
+    """
+
+    food: FoodResponse
+    defaulted_for_cat_count: int
 
 
 # --- Weights ---------------------------------------------------------------
@@ -317,9 +334,12 @@ class TargetSuggestionResponse(BaseModel):
     weight (factor 0.8, weight loss) when a goal is set, otherwise the current
     weight (factor 1.2, neutered-adult maintenance).
     ``suggested_target_kcal = rer_kcal x factor``.
+
+    ``cat_id`` is null in the by-weight mode (onboarding a cat that does not
+    exist yet), where the weights come straight from the query params.
     """
 
-    cat_id: int
+    cat_id: int | None
     current_weight_kg: float | None
     goal_weight_kg: float | None
     rer_kcal: float

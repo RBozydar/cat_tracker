@@ -27,11 +27,15 @@ def _rer_kcal(weight_kg: float) -> float:
 
 
 def compute_target_suggestion(
-    cat_id: int,
+    cat_id: int | None,
     goal_weight_kg: float | None,
     current_weight_kg: float | None,
 ) -> TargetSuggestionResponse:
-    """Build the calculator payload, preferring the goal weight when present."""
+    """Build the calculator payload, preferring the goal weight when present.
+
+    ``cat_id`` is null in the by-weight onboarding mode; there a weight is always
+    supplied so the "no weight to compute from" branch is never reached.
+    """
 
     if goal_weight_kg is not None:
         basis = TargetBasis.GOAL_WEIGHT

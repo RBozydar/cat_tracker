@@ -14,8 +14,14 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, select
 
 from app.db import SessionDep
-from app.models import Cat, Food, Meal
-from app.schemas import FoodCreate, FoodDeleteResult, FoodResponse, FoodUpdate
+from app.models import Cat, Food, FoodType, Meal
+from app.schemas import (
+    FoodCreate,
+    FoodDeleteResult,
+    FoodMutationResult,
+    FoodResponse,
+    FoodUpdate,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -28,6 +34,35 @@ def _get_food_or_404(session: Session, food_id: int) -> Food:
     if food is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Food {food_id} not found")
     return food
+
+
+def _apply_default_for_all_cats(session: Session, food: Food) -> int:
+    """Point every cat's matching (wet/dry) default at ``food``; return the count.
+
+    Only valid for a non-archived WET/DRY food — mirrors the per-cat default
+    validation (``cats._validate_default_food``); a TREAT or archived food → 400.
+    Existing meals are untouched: their calories come from the snapshot taken at
+    log time, so re-pointing a default never rewrites history.
+    """
+
+    if food.type is FoodType.TREAT:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "A treat cannot be set as a default wet/dry food",
+        )
+    if food.archived_at is not None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Food {food.id} is archived and cannot be a default",
+        )
+
+    cats = session.scalars(select(Cat)).all()
+    for cat in cats:
+        if food.type is FoodType.WET:
+            cat.default_wet_food_id = food.id
+        else:
+            cat.default_dry_food_id = food.id
+    return len(cats)
 
 
 def _clear_from_defaults(session: Session, food_id: int) -> list[int]:
@@ -59,7 +94,7 @@ def list_foods(
 
 
 @router.post("/foods", status_code=status.HTTP_201_CREATED)
-def create_food(payload: FoodCreate, session: SessionDep) -> FoodResponse:
+def create_food(payload: FoodCreate, session: SessionDep) -> FoodMutationResult:
     food = Food(
         name=payload.name,
         type=payload.type,
@@ -67,13 +102,21 @@ def create_food(payload: FoodCreate, session: SessionDep) -> FoodResponse:
         kcal_per_basis=payload.kcal_per_basis,
     )
     session.add(food)
+    session.flush()  # assign food.id before it can be pointed at from cat defaults
+
+    defaulted = (
+        _apply_default_for_all_cats(session, food) if payload.set_default_for_all_cats else 0
+    )
+
     session.commit()
     session.refresh(food)
-    return FoodResponse.model_validate(food)
+    return FoodMutationResult(
+        food=FoodResponse.model_validate(food), defaulted_for_cat_count=defaulted
+    )
 
 
 @router.patch("/foods/{food_id}")
-def update_food(food_id: int, payload: FoodUpdate, session: SessionDep) -> FoodResponse:
+def update_food(food_id: int, payload: FoodUpdate, session: SessionDep) -> FoodMutationResult:
     food = _get_food_or_404(session, food_id)
 
     if payload.type is not None and payload.type is not food.type:
@@ -82,13 +125,19 @@ def update_food(food_id: int, payload: FoodUpdate, session: SessionDep) -> FoodR
             "Food type is immutable and cannot be changed after creation",
         )
 
-    changes = payload.model_dump(exclude_unset=True, exclude={"type"})
+    changes = payload.model_dump(exclude_unset=True, exclude={"type", "set_default_for_all_cats"})
     for field, value in changes.items():
         setattr(food, field, value)
 
+    defaulted = (
+        _apply_default_for_all_cats(session, food) if payload.set_default_for_all_cats else 0
+    )
+
     session.commit()
     session.refresh(food)
-    return FoodResponse.model_validate(food)
+    return FoodMutationResult(
+        food=FoodResponse.model_validate(food), defaulted_for_cat_count=defaulted
+    )
 
 
 @router.delete("/foods/{food_id}")
